@@ -26,7 +26,7 @@
 | 势函数 | `D:\LAMMPS\Tersoff\` 下的 `Si.tersoff`、`Ti.meam.spline`、`Au_u3.eam` |
 | 工具链演练 | `tools/selftest.py` **PASS**（Cu 768 原子，QC `n_valid=3`） |
 | 锚点结构 | 平面 v1：36,072 原子，Si(001)/Ti(hcp)/Au/Ti/Si，G0 **READY** |
-| 锚点试运行 | 3k 步稳定（无 Lost atoms，drift 9e-6，TBR 3.0e-8）；正式 3×120k 后台运行中 |
+| 锚点试运行 | 3k 步稳定（无 Lost atoms，drift 9e-6，TBR 3.0e-8）；正式 3×120k 待启动（约 5.7 h） |
 | 三元素验证 | `Si/Ti/Au/Ti/Si` 1856 原子，3 seed × 30000 步，全部 exit 0；QC 按预期 FAIL |
 | 形状预览 | 7 个 `Si/Ti/Au/Ti/Si` 初始结构，约 21k 原子，见 `shapes/` |
 
@@ -134,8 +134,15 @@ $PY = "C:\Users\<you>\...\python.exe"
 完整设计、成本模型、审核清单和验收标准见
 [docs/AUTONOMOUS_LOOP.md](docs/AUTONOMOUS_LOOP.md)。
 
-当前状态：G0–G4、形状预览已可用；`build_geometry.py`、稳定锚点、批量调度器、
-EI 提议仍待完成。**锚点未通过前，不启动自动扫描**——否则只是在一个错误模型里找噪声。
+当前状态：G0–G4、形状预览已可用；`build_geometry.py` 已实现，平面锚点
+（36,072 原子）与矩形槽（38,000 原子）均通过 G0。锚点 3×120k 需要约 5.7 h，
+请在独立 PowerShell 窗口启动：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\si_nemd\anchor\start_anchor.ps1
+```
+
+日志：`anchor\workspace\anchor_run.log`；结果：`anchor\workspace\run_vNNN\report.txt`。
 
 ## 已知限制
 
