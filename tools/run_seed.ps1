@@ -1,4 +1,4 @@
-# =============================================================================
+﻿# =============================================================================
 # run_seed.ps1 -- launch exactly one seed, capture exit code and wall time.
 # Never overwrites an existing log.pattern. Does not decide pass/fail.
 # Usage:
@@ -43,10 +43,10 @@ $env:OMP_NUM_THREADS = "$omp"
 
 if ($launch -eq "mpi") {
     $fileName = $params.lammps.mpiexec
-    $argList = @("-n", "$ranks", $exe, "-in", "in.pattern", "-log", "log.pattern")
+    $argList = @("-n", "$ranks", $exe, "-in", "in.pattern", "-log", "log.pattern", "-nonbuf")
 } elseif ($launch -eq "serial") {
     $fileName = $exe
-    $argList = @("-in", "in.pattern", "-log", "log.pattern")
+    $argList = @("-in", "in.pattern", "-log", "log.pattern", "-nonbuf")
 } else {
     Write-Error "未知 launch_mode: $launch"
     exit 2

@@ -1,7 +1,8 @@
 $ErrorActionPreference = "Continue"
-$run = "D:\si_nemd\anchor\workspace\run_v003"
+$ws = "D:\si_nemd\anchor\workspace"
+$run = (Get-ChildItem $ws -Directory -Filter "run_v*" | Sort-Object Name | Select-Object -Last 1).FullName
 $py = "C:\Users\绯鹤\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\python\python.exe"
-$log = "D:\si_nemd\anchor\workspace\anchor_run.log"
+$log = Join-Path $ws "anchor_run.log"
 "START $(Get-Date -Format o)  run=$run" | Out-File -FilePath $log -Encoding utf8
 
 foreach ($s in 1001, 2002, 3003) {
