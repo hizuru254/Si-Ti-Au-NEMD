@@ -78,6 +78,8 @@ $PY = "C:\Users\<you>\...\python.exe"
 │  ├─ selftest.py               # 端到端演练（Cu）
 │  ├─ build_stack_validation.py # 三元素验证结构（非生产）
 │  └─ build_shapes.py           # 形状预览生成器
+├─ docs/
+│  └─ AUTONOMOUS_LOOP.md        # 自主设计循环（路线图与验收标准）
 ├─ examples/
 │  ├─ geom.SiTiAu.v1.json       # 已确认几何（APPROVED，2026-11-10）
 │  └─ geom.SiTiAu.legacy.json   # 旧几何反例
@@ -115,6 +117,20 @@ $PY = "C:\Users\<you>\...\python.exe"
 | 数据溯源 | `manifest.sha256` 覆盖全部输入，日志哈希与 `result.json` 一致 |
 
 `TBR_total = ΣΔT_i / q` 是四个界面的串联总阻；与单界面文献比较时不能直接对等。
+
+## 自主设计循环（路线图）
+
+目标：人类只做两次判断，其余由 AI 完成。
+
+1. **H0 锚点**（人类一次）：平面 v1 的 3 seed 全部 QC PASS，且长度/截面收敛 <5%。
+2. **AI 自主循环**：设计形状 → 小细胞筛选 → 代理模型（GP/EI）→ 完整细胞精算 → 排名。
+3. **H6 候选**（人类一次）：审核 top-5 的物理合理性（趋势、收敛、截面图、量级）。
+
+完整设计、成本模型、审核清单和验收标准见
+[docs/AUTONOMOUS_LOOP.md](docs/AUTONOMOUS_LOOP.md)。
+
+当前状态：G0–G4、形状预览已可用；`build_geometry.py`、稳定锚点、批量调度器、
+EI 提议仍待完成。**锚点未通过前，不启动自动扫描**——否则只是在一个错误模型里找噪声。
 
 ## 已知限制
 
