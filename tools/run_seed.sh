@@ -46,10 +46,10 @@ START=$(date +%s)
 
 if [[ "$LAUNCH" == "mpi" ]]; then
   timeout "$TIMEOUT" mpirun -np "$NP" --bind-to core "$EXE" \
-    -in in.pattern -log log.pattern > screen.txt 2> screen.err.txt
+    -in in.pattern -log log.pattern -nonbuf > screen.txt 2> screen.err.txt
 else
   timeout "$TIMEOUT" "$EXE" \
-    -in in.pattern -log log.pattern > screen.txt 2> screen.err.txt
+    -in in.pattern -log log.pattern -nonbuf > screen.txt 2> screen.err.txt
 fi
 CODE=$?
 END=$(date +%s)

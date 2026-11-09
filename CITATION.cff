@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use this workflow, please cite the repository."
+title: "Si/Ti/Au/Ti/Si NEMD Workflow"
+abstract: >-
+  A gate-driven LAMMPS NEMD framework for interfacial thermal resistance and
+  autonomous geometry screening of Si/Ti/Au/Ti/Si stacks.
+authors:
+  - family-names: hizuru254
+    given-names: ""
+version: 0.1.0
+date-released: 2026-11-10
+url: "https://github.com/hizuru254/Si-Ti-Au-NEMD"
+license: MIT

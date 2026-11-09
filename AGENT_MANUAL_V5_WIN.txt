@@ -1,11 +1,14 @@
-﻿================================================================================
+================================================================================
 文件名称: AGENT_MANUAL_V5_WIN.txt
-版本    : 5.0-win
-生效日期: 2026-11-09
+版本    : 5.1-win
+生效日期: 2026-11-10
 适用机器: 本机（Windows 11 原生 + LAMMPS 4Jul2026 MS-MPI + 32 逻辑核）
 文件性质: 本机 AI Agent 的唯一执行依据（Single Source of Truth）
 配套套件: D:\si_nemd\（已部署，可直接运行）
 姊妹文档: AGENT_MANUAL_V5_WSL.txt（另一台 WSL2 机器，未在本机验证）
+变更    : 5.1-win 增加生产几何生成器、B 方案、Ti hcp+LJ、批量调度器与
+          GP/EI 提议、搜索空间闸门；D1–D3 已由人类确认；补充中文路径
+          经 Python→PowerShell 传参被转码的实测问题。
 ================================================================================
 
 【0. 十秒摘要】
@@ -26,7 +29,7 @@
   任何不确定 -> 停止。停下来永远不算错，猜一个数一定算错。
 
 --------------------------------------------------------------------------------
-【0.1】本机的验证记录（2026-11-09 实测，不是估计）
+【0.1】本机的验证记录（2026-11-10 实测，不是估计）
 
   V1  工具链演练（Cu + EAM，768 原子，2500 步）
       命令：python D:\si_nemd\tools\selftest.py
@@ -57,6 +60,25 @@
 
   V4  MPI 探针
       结果：mpiexec 在本会话报 error 5（命名管道/服务），只能串行。
+
+  V5  平面锚点结构（Si(001)/Ti(hcp)/Au/Ti/Si，36,072 原子）
+      生成：tools\build_geometry.py --kind flat --t-nm 4.0 --ti 20 --bin 4
+      几何：Si 40 / Ti 20 / Au 40 / Ti 20 / Si 40 Å，界面 ±40/±20，
+            两端各 15 Å 真空；hot/cold 各 1,440 原子。
+      G0：READY（errors=0；仅非 ASCII 路径警告，搬到 D:\si_nemd 后消失）。
+      3k 步试运行：无 Lost atoms；强结合版 TBR 3.03e-8 m2K/W、ΔT 114 K、
+            TotEng 漂移 9e-6、热流对称性 0.3%。
+            弱结合版 TBR 1.72e-7、ΔT 650 K，已被强结合版取代。
+      注意：3k 步只证明“结构能稳定跑”，R²/时间收敛必须由 3×120k 判定。
+
+  V6  批量调度器端到端 pilot（矩形槽 B，38,000 原子，1 seed × 5k 步）
+      命令：tools\scan_runner.py --pilot --max-points 1
+      结果：build_geometry -> G0 READY -> new_run -> run_seed -> postprocess
+            -> qc_check 全链路跑通；QC FAIL（5k 步太短，属预期）；
+            scan.csv 状态正确变为 failed；scan_summary.csv 写入一行。
+      同时实测：在 C:\Users\<user>\Desktop（含中文）下调用 run_seed 时，
+            Python→PowerShell 的参数被按 ANSI 转码，路径乱码、找不到 run 目录；
+            迁到 D:\si_nemd 后正常。运行根必须纯 ASCII，见 P6。
 
 ================================================================================
 
@@ -137,7 +159,7 @@
                     ├─ Au_u3.eam       36548 B
                     ├─ Ag_u3.eam / GaN.tersoff / SiCGe.tersoff
     磁盘            C: 约 194 GB 可用；D: 约 403 GB 可用
-    用户目录        C:\Users\绯鹤（含非 ASCII）                       实测
+    用户目录        C:\Users\<user>（含非 ASCII）                      实测
     原子吞吐        1856 原子、30000 步约 97 s（约 310 steps/s）        V2
 
 2.2 路径与编码铁律
@@ -158,6 +180,12 @@
 
     P5 不要用 OneDrive/同步盘放 workspace（文件锁会损坏日志）。
 
+    P6 所有脚本参数里的路径必须是纯 ASCII。实测：从 Python 调
+        powershell.exe -File run_seed.ps1 -RunDir C:\Users\<中文>\... 时，
+        参数会被按 ANSI 代码页转码，run_seed 收到乱码路径并报
+        “Cannot find path”。即使 LAMMPS 本身能读相对路径，只要运行根含中文，
+        批量调度也会失败。固定用 D:\si_nemd。
+
 2.3 命令规范（PowerShell 5.1）
 
     C1 外部程序用 & 调用并检查 $LASTEXITCODE。
@@ -169,6 +197,8 @@
          $env:PYTHONIOENCODING = "utf-8"
     C5 每个外部命令都要有超时：干跑 900 s，单 seed 7200–86400 s。
        超时 -> 退出码 124 -> B 类，不得重试。
+    C6 长跑必须给 LAMMPS 加 -nonbuf（run_seed.ps1 已内置）。
+       否则 log.pattern 会缓冲很久不刷新，看起来像卡死，容易误判。
 
 2.4 MPI 受限的判定
 
@@ -207,19 +237,26 @@
     ├─ templates\in.pattern.template
     ├─ tools\
     │   ├─ geomlib.py                校验/解析
+    │   ├─ build_geometry.py         生产几何（Si(001)/Ti hcp/Au，B 方案）
     │   ├─ preflight.py              G0
     │   ├─ new_run.py                G1
     │   ├─ scan_status.py            只改 scan.csv 的 status
+    │   ├─ scan_runner.py            批量：build -> G0 -> run -> qc
+    │   ├─ optimize.py               GP/EI（或 LHS）提议下一批点
+    │   ├─ report_candidates.py      top-k 候选报告
     │   ├─ run_seed.ps1              G2（PowerShell 5.1）
+    │   ├─ run_seed.sh               WSL 版（未验证）
     │   ├─ postprocess.py            G3
     │   ├─ qc_check.py               G4
     │   ├─ selftest.py               工具链演练
     │   └─ build_stack_validation.py 流程验证结构（非生产）
+    ├─ config\search_space.json      搜索空间 + approved 闸门
     ├─ validation\                   本机验证工程（保留作为证据）
     │   ├─ geom.json / params.json / potentials.in / structure.data
     │   └─ workspace\run_v001\...
+    ├─ anchor\                       平面锚点工程（强 LJ，3 seed × 120k）
     ├─ examples\
-    │   ├─ geom.SiTiAu.v1.json       建议几何（DRAFT）
+    │   ├─ geom.SiTiAu.v1.json       已确认几何（APPROVED，2026-11-10）
     │   └─ geom.SiTiAu.legacy.json   旧几何（反例，禁止使用）
     ├─ logs\preflight_report.json
     └─ workspace\
@@ -343,19 +380,36 @@
       bulk_validation.verdict=PASS（验证工程可 WAIVED，见 params.quality）。
 
 4.5 scan.csv
-    表头固定：
-      scan_id,W_nm,D_nm,P_nm,t_nm,phi_deg,sided,status,note
+    表头固定（5.1 起新增 kind）：
+      scan_id,kind,W_nm,D_nm,P_nm,t_nm,phi_deg,sided,status,note
+    kind: flat / rect / trapezoid / cross / rot45。
     status: pending/running/done/failed/skipped。
     Agent 只能改 status 列，用 tools\scan_status.py。
 
-4.6 几何生成器（人类提供）
-    D:\si_nemd\tools\build_geometry.py，接口：
-      python tools\build_geometry.py --scan-csv config\scan.csv --scan-id S001 \
-             --out-structure structures\S001.data --out-geom structures\S001.geom.json
-    退出码 0 = 成功；产物必须过 4.2/4.3。
-    脚本不存在或非 0 -> B 类“缺少几何生成器”，停机。
-    Agent 不得用 Atomsk / 手写坐标临时造结构。
-    （validation\ 下的 build_stack_validation.py 只用于流程验证，不是生产生成器。）
+    搜索空间闸门：
+      config\search_space.json 的 approved=true 且 W/D/P/t/phi/sided 在范围内，
+      scan_runner 才自动把该点几何置为 APPROVED 并开算；
+      否则置 DRAFT、跳过，等人类按 H1b 放行。越界点不得偷偷放行。
+
+4.6 几何生成器（已实现，生产）
+    tools\build_geometry.py，B 方案：
+      - 槽刻在 Ti 侧（Au/Ti 界面），由 Au 填充；
+      - t = Au 膜厚（不是刻蚀深度）；D = 刻蚀深度；
+      - Ti 用 hcp 几何 + LJ；Si(001) 金刚石；Au fcc；
+      - 图案化默认 Ti 24 Å、bin 2、D<=8 Å（保证 Ti 侧拟合窗口）；
+      - 平面锚点默认 Ti 20 Å、bin 4。
+
+    接口：
+      python tools\build_geometry.py --scan-id S001 --kind rect `
+        --t-nm 4.0 --ti 24 --si 40 `
+        --W-nm 1.629 --D-nm 0.8 --P-nm 3.258 --phi 0 `
+        --sided single --bin 2 --status APPROVED `
+        --out-structure structures\S001.data --out-geom structures\S001.geom.json
+
+    约束：非 flat 必须 P>W>0、0<D<=8 Å；产物必须过 4.2/4.3。
+    status 只能由“已批准空间”或人类 H1b 置 APPROVED。
+    Ti.meam.spline 是单元素 spline，不能进三元素 hybrid（附录 C）；
+    纯 Ti 体性质可用它单独校验，但不能拿它给界面 Ti 供能。
 
 ================================================================================
 
@@ -365,7 +419,10 @@
 
     chcp 65001 > $null
     $env:PYTHONIOENCODING = "utf-8"
-    $PY = "C:\Users\绯鹤\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\python\python.exe"
+    $PY = Join-Path $env:USERPROFILE ".dsh\dsh-runtimes\dsh-primary-runtime\dependencies\python\python.exe"
+    if (-not (Test-Path $PY)) { $PY = "python" }
+    # 若 python 不在 PATH，改成你自己的解释器绝对路径（必须是 ASCII 路径）。
+    # 不要用含中文的用户目录下的解释器去调用带路径参数的子进程。
 
     & $PY .\tools\preflight.py `
         --config    .\config\params.json `
@@ -448,11 +505,17 @@ S0 领取任务
     无 pending -> “队列已空，请人类决定”，停下。
 
 S1 生成几何与结构
-    & $PY .\tools\build_geometry.py --scan-csv .\config\scan.csv `
-          --scan-id S001 --out-structure .\structures\S001.data `
-          --out-geom .\structures\S001.geom.json
-    判据：退出码 0；Q1–Q8 自洽；status 可为 DRAFT。
-    若 DRAFT：停下等人类改成 APPROVED（H1）。Agent 不得改 status。
+    自动（推荐）：tools\scan_runner.py 已把 S1–S4 串起来，见第 13 节。
+    手工单点：
+      & $PY .\tools\build_geometry.py --scan-id S001 --kind rect `
+            --t-nm 4.0 --ti 24 --si 40 `
+            --W-nm 1.629 --D-nm 0.8 --P-nm 3.258 --phi 0 `
+            --sided single --bin 2 --status DRAFT `
+            --out-structure .\structures\S001.data `
+            --out-geom .\structures\S001.geom.json
+    判据：退出码 0；Q1–Q8 自洽。
+    status 由搜索空间决定：approved=true 且在范围内 -> APPROVED；
+    否则 DRAFT -> 停下等人类按 H1b 放行。Agent 不得改 status。
 
 S2 G0
     见 5.1。退出码 0 才继续；否则按 5.5 输出，HOLD。
@@ -771,25 +834,51 @@ S9 停下等人
 
 ================================================================================
 
-【十三、代理模型（可选，人类开启）】
+【十三、自主搜索（已实现，人类开启）】
 
-13.1 条件：>=12 个 is_passed=True 的 run；参数覆盖 >=3 维；人类书面同意。
-13.2 数据：只读 ledger.csv 与各 run 的 tbr_result.csv；缺失值剔除不插值。
-13.3 模型：GP/随机森林，Optuna 调参；目标 TBR_total 最小；输出 top-K<=10。
-13.4 回验：top-K 至少 5 个回 LAMMPS 实算（新建 run）。
-     只有实算可进 tbr_result.csv；预测值字段名必须带 predicted_。
-13.5 禁止：把 predicted_TBR 写成 TBR；用预测替代未跑种子；据预测宣布最优。
+13.1 闸门：锚点 H0 已 PASS；config\search_space.json 的 approved=true（H1a）。
+     未过闸门时，scan_runner 会拒绝所有点，不得绕过。
+
+13.2 标准命令（在 D:\si_nemd 下）：
+
+     # 1) 提议下一批点
+     & $PY .\tools\optimize.py --summary .\workspace\scan_summary.csv `
+        --space .\config\search_space.json --scan-csv .\config\scan.csv `
+        --out .\config\scan.next.csv --n-propose 8
+
+     # 2) 批量跑（--pilot = 1 seed/5k 步；正式去掉 --pilot）
+     & $PY .\tools\scan_runner.py --config .\config\params.json `
+        --scan-csv .\config\scan.next.csv --potentials .\potentials.in `
+        --space .\config\search_space.json --pilot --max-points 1
+
+     # 3) 候选报告
+     & $PY .\tools\report_candidates.py --summary .\workspace\scan_summary.csv `
+        --out .\optimization\candidates.md
+
+13.3 策略：有效点 <5 用 LHS 探索；>=5 用 GP(RBF) + Expected Improvement。
+     只读 is_passed=True 的行；失败点不参与拟合、不参与排序。
+
+13.4 回验：top-K 必须新建 run 实算；预测值不得写入 tbr_result.csv，
+     字段名必须带 predicted_。候选报告只排实算 PASS 点。
+
+13.5 禁止：用 predicted_TBR 替代实算；跳过 QC；改阈值；把失败点算进排名；
+     在锚点/空间未批准时偷偷开扫。
+
+13.6 预算（串行）：小细胞 1.8k 原子约 100 s/点；37k 原子 3 seed 约 5.7 h/组；
+     一轮“20 点筛选 + top-5 精算”约 2–3 天。
 
 ================================================================================
 
 【十四、人工审批（HITL）】
 
-    H1 几何 DRAFT -> APPROVED（层厚、界面 z、窗口、控温区、真空余量）
+    H1a 搜索空间批准（一次性）：config\search_space.json 的 approved=true，
+        范围（kind/W/D/P/t/phi/sided）由人类书面确认。
+    H1b 单点几何放行（仅当点不在已批准空间，或人类要求逐点审）。
     H2 势函数 lock（sha256、体性质 verdict、时效）
     H3 试点时间预算（T_run 是否可接受）
     H4 改热流/步数/阈值（书面指令原文，新建 run）
     H5 QC 失败后的处置（作废/加长/加密种子/改几何）
-    H6 代理模型回合（是否开启、候选点是否回验）
+    H6 代理模型回合：top-K 候选是否物理合理、是否进入局部优化
 
     记录格式：
       [H2] 2026-11-09 22:30 人类（姓名）批准 potentials.lock.json v1，指令原文：“...”
@@ -818,6 +907,10 @@ S9 停下等人
     [ ] qc_check 生成 tbr_result.csv（18 列）
     [ ] geom.status 改回 DRAFT，preflight 必须 BLOCKED
     [ ] 改一个字节 log，qc_check 必须报 log_unmodified=False
+    [ ] build_geometry.py 生成平面锚点 36,072 原子，G0 READY
+    [ ] scan_runner.py --dry-run 打印正确；--pilot 单点能跑完并写 scan_summary
+    [ ] search_space.approved=false 时，scan_runner 必须拒绝所有点
+    [ ] 中文路径下调用 run_seed 必须失败（P6 回归检查）
 
 15.3 本机验证工程（可重跑）
     工程：D:\si_nemd\validation\
@@ -873,23 +966,25 @@ S9 停下等人
 
 附录 D：未决事项（必须人类决定）
 
-    D1 几何
+    D1 几何（已确认 2026-11-10）
        旧几何 Ti 层 5 Å，放不下线性拟合窗口，且层填满盒子（无真空），
-       违反 Q3/Q8。examples\geom.SiTiAu.v1.json 给的是加厚版建议：
+       违反 Q3/Q8。examples\geom.SiTiAu.v1.json 已改为 APPROVED：
        Si(40)/Ti(20)/Au(40)/Ti(20)/Si(40)，界面 ±40/±20，窗口 16–20 Å，
-       两端各 15 Å 真空；仍是 DRAFT，需人类确认层厚与界面位置。
+       两端各 15 Å 真空。
+       图案化设计使用 B 方案：Ti 24 Å、bin 2、D<=8 Å；t = Au 膜厚。
        若坚持 5 Å Ti，只能报整叠层总 TBR，不能报逐界面 TBR。
 
-    D2 势函数
-       Si/Ti/Au 没有现成的多元素势组合。三选一（人类决定）：
-         a. 自备 Ti MEAM 参数合入多元素库，用 meam/c；
-         b. Ti 及交叉项全用 LJ，Si/Au 层内用 Tersoff/EAM（本机验证采用）；
-         c. 先只做 Si/Au 两层（Si 衬底 + Au 膜），Ti 后续。
-       未获 lock APPROVED 前，不得开算生产。
+    D2 势函数（已确认）
+       人类选择方案 b：Si-Si 用 Tersoff，Au-Au 用 EAM，
+       Ti-Ti 与所有跨界面项用 LJ；Ti 原子按 hcp 几何排布。
+       Ti.meam.spline 是单元素 spline，不能进三元素 hybrid；
+       只用于纯 Ti 体性质校验（a、c/a、C11/C12/C44），
+       不改变界面模型里 Ti 用 LJ 的事实。
+       未获 potentials.lock APPROVED 前，不得开算生产。
 
-    D3 MPI
-       本机 MS-MPI 报 error 5，只能串行。修好前 3.7 万原子约 6.6 h/组。
-       这是环境问题，不要用“改小体系”绕过。
+    D3 MPI（已确认）
+       本机 MS-MPI 报 error 5，只能串行；人类已确认接受串行。
+       3.7 万原子约 6.6 h/组。这是环境问题，不要用“改小体系”绕过。
 
     D4 结构平衡与温度定义
        本机验证叠层出现非单调剖面，原因不是“热扩散慢”：10 ps 的热扩散
@@ -926,6 +1021,12 @@ S9 停下等人
         hot/cold 贴在自由表面；表面原子配位数低，界面热阻可能含表面效应。
         建议在控温区外侧留 2–5 Å 同材料缓冲层，或做一次“缓冲层有无”的对照。
 
+    D11 Ti 相与势函数
+        Ti 采用 hcp 几何（a=65.16/22 Å，c=4.68 Å），为适配方形盒子在 y 方向
+        有 <2.5% 应变；Ti-Ti 与跨界面项仍是 LJ，不是真实 Ti 键合。
+        Ti.meam.spline 只用于纯 Ti 体性质校验（hcp a、c/a、C11/C12/C44），
+        不能进三元素 hybrid。这个限制必须在论文/报告里写明。
+
 附录 E：V3/V4 -> V5 修改对照
 
     E1  mpirun/WSL           本机无 WSL、mpiexec error 5 -> 串行 + lmp.exe
@@ -944,9 +1045,21 @@ S9 停下等人
     E14 无验证记录            -> 本文件 0.1 节记录 V1–V4
     E15 层序写反（V4）        -> 正确为 Si/Ti/Au/Ti/Si（Si 衬底/Ti/Au/Ti/Si 顶盖）
     E16 温度剖面含漂移         -> 明确 fix ave/chunk temp 不扣 COM；见 D4
+    E17 无生产几何生成器       -> build_geometry.py（Si(001)/Ti hcp/Au，B 方案）
+    E18 无批量/优化            -> scan_runner + optimize + report_candidates
+    E19 中文路径传参乱码       -> P6；运行根必须纯 ASCII
 
 附录 F：变更记录
 
+    V5.1-win  2026-11-10
+      - 增加 build_geometry.py（B 方案：刻 Ti、填 Au；Ti hcp+LJ；
+        Ti24/bin2/D<=8；t=Au 膜厚）
+      - 增加 scan_runner.py / optimize.py / report_candidates.py
+      - 增加 search_space.json 的 approved 闸门（H1a）
+      - 实测并记录：Python→PowerShell 中文路径参数被转码（P6）
+      - V5/V6 记录：36,072 原子平面锚点 G0 READY；3k 步 TBR 3.0e-8；
+        批量 pilot 全链路跑通、QC FAIL 按预期
+      - D1–D3 已由人类确认；新增 D11（Ti hcp/LJ）
     V5-win  2026-11-09
       - 按本机实测重写：Windows 原生、D:\LAMMPS\Tersoff、串行
       - 修正 fix heat 语义、真空/短路、profile 空 chunk、TBR 定义

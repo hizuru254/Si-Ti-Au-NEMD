@@ -1,7 +1,7 @@
-﻿================================================================================
+================================================================================
 文件名称: AGENT_MANUAL_V5_WSL.txt
-版本    : 5.0-wsl（未验证版）
-生效日期: 2026-11-09
+版本    : 5.1-wsl（未验证版）
+生效日期: 2026-11-10
 适用机器: 另一台机器（Windows 11 + WSL2 Ubuntu 22.04 + LAMMPS 29Sep2021
           + AMD EPYC 9684X 96 核 + 576 GB RAM + RTX 4090）
 文件性质: 该机器的执行依据；结构与判据完全沿用 V5-WIN
@@ -25,6 +25,22 @@
 
   如果目标机实际不是 WSL2（例如也是 Windows 原生），就不要用本文件，
   直接用 V5-WIN，只改 params.json 里的路径与核数。
+
+【0.1】5.1 新增组件（与 WIN 同步，仍需在目标机验证）
+
+  - tools/build_geometry.py：生产几何，Si(001) 金刚石 + Ti hcp + Au fcc，
+    B 方案（槽刻在 Ti 侧、Au 填充）；t = Au 膜厚，D = 刻蚀深度。
+  - 图案化默认 Ti 24 Å、bin 2、D<=8 Å；平面锚点 Ti 20 Å、bin 4。
+  - tools/scan_runner.py：批量 build -> G0 -> run -> postprocess -> qc；
+    WSL 上自动调用 bash tools/run_seed.sh（不是 PowerShell）。
+  - tools/optimize.py：<5 个有效点用 LHS，>=5 用 GP+EI；
+    tools/report_candidates.py：top-k 候选报告。
+  - config/search_space.json 的 approved=true 是开扫闸门；越界点会被拒绝。
+  - Ti.meam.spline 是单元素 spline，不能进 Si/Ti/Au 三元素 hybrid；
+    只能单独做纯 Ti 体性质校验（a、c/a、C11/C12/C44）。
+  - 路径：WSL 区分大小写；仍不要用含中文的路径。Windows 侧的
+    C:\Users\<user>\... 经 scp 传输时，路径里的中文同样会带来麻烦。
+  - run_seed.sh 建议与 WIN 一样加 -nonbuf，否则长跑日志可能长时间不刷新。
 
 ================================================================================
 
@@ -56,13 +72,15 @@
 2.1 目标目录
 
     /home/<user>/si_nemd/
-    ├─ config\{params.json, scan.csv, potentials.lock.json}
+    ├─ config/{params.json, scan.csv, search_space.json, potentials.lock.json}
     ├─ templates/in.pattern.template
-    ├─ tools\{geomlib.py, preflight.py, new_run.py, scan_status.py,
-    │         postprocess.py, qc_check.py, selftest.py, run_seed.sh}
-    ├─ examples\...
-    ├─ logs\preflight_report.json
-    └─ workspace\run_vNNN\...
+    ├─ tools/{geomlib.py, build_geometry.py, preflight.py, new_run.py,
+    │         scan_status.py, scan_runner.py, optimize.py,
+    │         report_candidates.py, postprocess.py, qc_check.py,
+    │         selftest.py, run_seed.sh}
+    ├─ examples/...
+    ├─ logs/preflight_report.json
+    └─ workspace/run_vNNN/...
 
     不要放在 /mnt/c 下跑生产：跨文件系统 I/O 会显著拖慢 LAMMPS 日志与
     write_data。应放在 WSL 的 ext4 家目录。
@@ -70,7 +88,7 @@
 2.2 从本机拷贝
 
     # 在 Windows PowerShell（本机）：
-    scp -r "C:\Users\绯鹤\Desktop\si_nemd" <user>@<host>:/home/<user>/si_nemd
+    scp -r "C:\Users\<user>\Desktop\si_nemd" <user>@<host>:/home/<user>/si_nemd
 
     # 或先打包：
     tar -czf si_nemd.tgz si_nemd
@@ -167,10 +185,10 @@
   cd "$SEED_DIR"
   START=$(date +%s)
   if [[ "$LAUNCH" == "mpi" ]]; then
-    timeout "$TIMEOUT" mpirun -np "$NP" --bind-to core lmp -in in.pattern -log log.pattern \
+    timeout "$TIMEOUT" mpirun -np "$NP" --bind-to core lmp -in in.pattern -log log.pattern -nonbuf \
       > screen.txt 2> screen.err.txt
   else
-    timeout "$TIMEOUT" lmp -in in.pattern -log log.pattern \
+    timeout "$TIMEOUT" lmp -in in.pattern -log log.pattern -nonbuf \
       > screen.txt 2> screen.err.txt
   fi
   CODE=$?
@@ -369,6 +387,14 @@
 ================================================================================
 
 【十三、变更记录】
+
+  V5.1-wsl  2026-11-10
+    - 同步 build_geometry.py（Si(001)/Ti hcp/Au，B 方案）
+    - 同步 scan_runner.py / optimize.py / report_candidates.py
+    - 图案化 Ti 24 Å、bin 2、D<=8 Å；t = Au 膜厚
+    - 增加 search_space.json 的 approved 闸门（H1a）
+    - run_seed.sh 增加 -nonbuf；补充 WSL 上 scan_runner 调用 bash 的说明
+    - 仍全部标记 [未验证]
 
   V5-wsl  2026-11-09
     - 从 V5-WIN 派生，只改环境相关部分

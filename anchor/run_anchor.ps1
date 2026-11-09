@@ -1,7 +1,8 @@
 $ErrorActionPreference = "Continue"
 $ws = "D:\si_nemd\anchor\workspace"
 $run = (Get-ChildItem $ws -Directory -Filter "run_v*" | Sort-Object Name | Select-Object -Last 1).FullName
-$py = "C:\Users\绯鹤\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\python\python.exe"
+$py = Join-Path $env:USERPROFILE ".dsh\dsh-runtimes\dsh-primary-runtime\dependencies\python\python.exe"
+if (-not (Test-Path $py)) { $py = "python" }
 $log = Join-Path $ws "anchor_run.log"
 "START $(Get-Date -Format o)  run=$run" | Out-File -FilePath $log -Encoding utf8
 

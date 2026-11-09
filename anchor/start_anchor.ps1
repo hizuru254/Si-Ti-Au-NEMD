@@ -1,5 +1,6 @@
 $ErrorActionPreference = "Stop"
-$py = "C:\Users\绯鹤\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\python\python.exe"
+$py = Join-Path $env:USERPROFILE ".dsh\dsh-runtimes\dsh-primary-runtime\dependencies\python\python.exe"
+if (-not (Test-Path $py)) { $py = "python" }
 $root = "D:\si_nemd"
 Push-Location $root
 
