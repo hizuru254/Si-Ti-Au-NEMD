@@ -3,6 +3,8 @@
 一套给本地 LLM Agent 使用的 LAMMPS NEMD 执行与取证框架：把“算一个界面热阻”拆成
 可校验、可复现、可追责的固定流程，避免 Agent 自行改物理、伪造数据或跳过门禁。
 
+仓库：<https://github.com/hizuru254/Si-Ti-Au-NEMD>（私有）
+
 > **层序（唯一正确顺序，从下到上）**
 >
 > `Si 衬底 / Ti 粘附层 / Au 中间层 / Ti 粘附层 / Si 顶盖`
@@ -28,7 +30,7 @@
 
 ```powershell
 # 1. 克隆到纯 ASCII 路径（不要放在含中文的目录下）
-git clone <this-repo> D:\si_nemd
+git clone https://github.com/hizuru254/Si-Ti-Au-NEMD.git D:\si_nemd
 cd D:\si_nemd
 
 # 2. 按本机路径修改 config\params.json：
