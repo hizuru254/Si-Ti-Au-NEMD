@@ -5,8 +5,8 @@
     "launch_mode":  "serial",
     "mpi_ranks":  16,
     "omp_threads":  1,
-    "started_at":  "2026-11-09T23:24:37.4923167+08:00",
-    "wall_time_s":  97.31,
+    "started_at":  "2026-11-10T00:49:16.0662640+08:00",
+    "wall_time_s":  97.03,
     "timed_out":  false,
     "exit_code":  0,
     "host":  "LAPTOP-HIZURU"

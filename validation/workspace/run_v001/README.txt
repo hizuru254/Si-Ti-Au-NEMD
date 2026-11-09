@@ -1,6 +1,6 @@
 ﻿==============================================================================
 run_v001  VAL001
-几何参数: W=0 nm  D=0 nm  P=0 nm  t=0 nm  phi=0 deg  side=single
+几何参数: W=0 nm  D=0 nm  P=0 nm  t=4.9 nm  phi=0 deg  side=single
 geom_id : validation_SiTiAuTiSi_fcc16
 热流    : 0.005 eV/ps  (params.json)
 生产步数: 20000  dt=0.001 ps

@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
-  "status": "DRAFT",
+  "status": "APPROVED",
   "geometry_id": "SiTiAu_symmetric_thick_v1",
-  "note": "建议几何：Si/Ti/Au/Ti/Si，上下对称；Si 40 A、Ti 20 A、Au 40 A；每个线性拟合窗口 16-20 A，完全落在单一材料内，两端各留 15 A 真空。此文件为 DRAFT，必须由人类审阅后改为 APPROVED 才能计算。",
+  "note": "人类已确认（2026-11-10）：Si/Ti/Au/Ti/Si，上下对称；Si 40 A、Ti 20 A、Au 40 A；界面 ±40/±20；拟合窗口 16-20 A，完全落在单一材料内，两端各留 15 A 真空。status=APPROVED。",
   "box": {
     "lx": 65.16,
     "ly": 65.16,

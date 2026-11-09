@@ -18,6 +18,9 @@
 
 | 项目 | 结果 |
 |---|---|
+| 几何 v1 | **APPROVED**（2026-11-10）：40/20/40/20/40 Å，界面 ±40/±20 |
+| 势函数方案 | Ti-Ti 与跨界面用 **LJ**；Si-Si 用 Tersoff；Au-Au 用 EAM |
+| 并行方式 | **串行**（MS-MPI 在本机不可用；3.7 万原子约 6.6 h/组） |
 | 操作系统 | Windows 11（PowerShell 5.1，无 pwsh 7） |
 | LAMMPS | `D:\LAMMPS\LAMMPS 64-bit 4Jul2026-MSMPI\bin\lmp.exe`（4 Jul 2026） |
 | MPI | `mpiexec` 在本机报 `error 5`（命名管道 / smpd 服务），当前只能串行 |
@@ -77,7 +80,7 @@ $PY = "C:\Users\<you>\...\python.exe"
 │  ├─ build_stack_validation.py # 三元素验证结构（非生产）
 │  └─ build_shapes.py           # 形状预览生成器
 ├─ examples/
-│  ├─ geom.SiTiAu.v1.json       # 建议几何（DRAFT）
+│  ├─ geom.SiTiAu.v1.json       # 已确认几何（APPROVED，2026-11-10）
 │  └─ geom.SiTiAu.legacy.json   # 旧几何反例
 ├─ validation/                  # 三元素验证工程（含一次完整运行的证据）
 └─ shapes/                      # 7 个形状的 data / PNG / zip

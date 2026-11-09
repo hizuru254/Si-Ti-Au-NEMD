@@ -2,10 +2,10 @@
   "schema_version": "1.0",
   "run_id": "run_v001",
   "seed": "seed_2002",
-  "log_sha256": "913a73748f8b91b159ff58206150ac73da39795045259974da3c3b9125f29f9c",
+  "log_sha256": "5d05690ad8cf3252ed9fc73b79e8e037d52033c32ca7ae973dcf9bab7401c940",
   "profile_sha256": "98b9c6e45e509a9cfe536c1324deaddc604697f766c0d0bb90d2f98244e85bc4",
   "exit_code": 0,
-  "wall_time_s": 97.31,
+  "wall_time_s": 97.03,
   "status": "OK",
   "lammps_banner": "LAMMPS (4 Jul 2026)",
   "box": {

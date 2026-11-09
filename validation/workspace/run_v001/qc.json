@@ -6,11 +6,11 @@
     "W_nm": "0",
     "D_nm": "0",
     "P_nm": "0",
-    "t_nm": "0",
+    "t_nm": "4.9",
     "phi_deg": "0",
     "sided": "single",
     "status": "pending",
-    "note": "pipeline validation Si/Ti/Au/Ti/Si flat stack"
+    "note": "flat baseline (no groove); Au film 4.9 nm; pipeline validation Si/Ti/Au/Ti/Si"
   },
   "per_seed": {
     "seed_1001": {
@@ -91,5 +91,5 @@
   "TBR_relstd": null,
   "is_passed": false,
   "note": "all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged; seed_2002:fit_quality/time_converged; seed_3003:fit_quality/time_converged",
-  "checked_at": "2026-11-09T23:27:52+08:00"
+  "checked_at": "2026-11-10T00:52:31+08:00"
 }
