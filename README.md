@@ -25,6 +25,8 @@
 | LAMMPS | `D:\LAMMPS\LAMMPS 64-bit 4Jul2026-MSMPI\bin\lmp.exe`（4 Jul 2026） |
 | 势函数 | `D:\LAMMPS\Tersoff\` 下的 `Si.tersoff`、`Ti.meam.spline`、`Au_u3.eam` |
 | 工具链演练 | `tools/selftest.py` **PASS**（Cu 768 原子，QC `n_valid=3`） |
+| 锚点结构 | 平面 v1：36,072 原子，Si(001)/Ti(hcp)/Au/Ti/Si，G0 **READY** |
+| 锚点试运行 | 3k 步稳定（无 Lost atoms，drift 9e-6，TBR 3.0e-8）；正式 3×120k 后台运行中 |
 | 三元素验证 | `Si/Ti/Au/Ti/Si` 1856 原子，3 seed × 30000 步，全部 exit 0；QC 按预期 FAIL |
 | 形状预览 | 7 个 `Si/Ti/Au/Ti/Si` 初始结构，约 21k 原子，见 `shapes/` |
 
@@ -67,6 +69,7 @@ $PY = "C:\Users\<you>\...\python.exe"
 │  └─ potentials.lock.example.json
 ├─ templates/in.pattern.template
 ├─ tools/
+│  ├─ build_geometry.py         # 生产几何：Si(001)/Ti(hcp)/Au, B 方案
 │  ├─ geomlib.py                # 几何/数据文件校验
 │  ├─ preflight.py              # Gate 0：环境与输入契约
 │  ├─ new_run.py                # 建版（原子、不可覆盖）
@@ -84,6 +87,8 @@ $PY = "C:\Users\<you>\...\python.exe"
 │  ├─ geom.SiTiAu.v1.json       # 已确认几何（APPROVED，2026-11-10）
 │  └─ geom.SiTiAu.legacy.json   # 旧几何反例
 ├─ validation/                  # 三元素验证工程（含一次完整运行的证据）
+├─ anchor/                      # 锚点工程：平面 v1 + 强 LJ 界面，3 seed × 120k
+├─ structures/                  # build_geometry.py 生成的结构（gitignore）
 └─ shapes/                      # 7 个形状的 data / PNG / zip
 ```
 

@@ -3,3 +3,6 @@ __pycache__/
 .preflight/
 logs/
 *.tmp
+structures/
+anchor/workspace/
+validation/workspace/*/*/screen.err.txt

@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "status": "APPROVED",
+  "note": "Anchor: Ti hcp geometry + strong LJ interfaces; pure-Ti meam/spline bulk check pending",
+  "files": {
+    "potentials.in": {
+      "sha256": "f889c503ac6e3326e442faa0a9acd0377772baf18b4717fddcfe3d599c4b7900"
+    },
+    "Si.tersoff": {
+      "sha256": "5b55dc7be1569193f468b9f56128a36e67feedd8e145561f61aec4b49a33d723"
+    },
+    "Au_u3.eam": {
+      "sha256": "f34555e13ff7abdaf7350515759d0e3f353a3ad7003208052e3d6045311d42be"
+    }
+  },
+  "bulk_validation": {
+    "verdict": "WAIVED",
+    "note": "Anchor pilot; Ti bulk validation pending"
+  }
+}
