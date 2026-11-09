@@ -1,6 +1,13 @@
+param([string]$RunDir = "")
 $ErrorActionPreference = "Continue"
+chcp 65001 > $null
+$env:PYTHONIOENCODING = "utf-8"
 $ws = "D:\si_nemd\anchor\workspace"
-$run = (Get-ChildItem $ws -Directory -Filter "run_v*" | Sort-Object Name | Select-Object -Last 1).FullName
+if ($RunDir) {
+    $run = (Resolve-Path -LiteralPath $RunDir).Path
+} else {
+    $run = (Get-ChildItem $ws -Directory -Filter "run_v*" | Sort-Object Name | Select-Object -Last 1).FullName
+}
 $py = Join-Path $env:USERPROFILE ".dsh\dsh-runtimes\dsh-primary-runtime\dependencies\python\python.exe"
 if (-not (Test-Path $py)) { $py = "python" }
 $log = Join-Path $ws "anchor_run.log"
