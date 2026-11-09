@@ -118,9 +118,9 @@ AI 用 **拉丁超立方/ Sobol** 生成第一批 12–20 个点，保证覆盖�
 | 形状参数化预览（7 种） | ✅ |
 | **生产几何生成器 `build_geometry.py`** | ✅ Si(001)/Ti(hcp)/Au, B 方案 |
 | **稳定锚点（QC PASS 的平面结构）** | 🔄 已准备，待启动 3×120k |
-| 批量调度器（scan → run → qc） | ❌ 待实现 |
-| 代理模型 + EI 提议 | ❌ 待实现 |
-| 候选报告（top-5 + 结构图） | ❌ 待实现 |
+| 批量调度器（scan → run → qc） | ✅ `scan_runner.py`，1 点 pilot 已跑通 |
+| 代理模型 + EI 提议 | ✅ `optimize.py`（<5 点用 LHS） |
+| 候选报告（top-k + 审核清单） | ✅ `report_candidates.py` |
 
 **物理层缺口**（即使编排全自动也绕不过）：
 

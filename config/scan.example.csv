@@ -1,7 +1,4 @@
-scan_id,W_nm,D_nm,P_nm,t_nm,phi_deg,sided,status,note
-S001,20,5,40,5,0,double,pending,flat baseline
-S002,20,5,40,3,0,double,pending,t = 3 nm
-S003,20,5,40,8,0,double,pending,t = 8 nm
-S004,10,5,40,5,0,double,pending,W = 10 nm
-S005,20,5,30,5,0,double,pending,P = 30 nm
-S006,20,3,40,5,0,double,pending,D = 3 nm
+scan_id,kind,W_nm,D_nm,P_nm,t_nm,phi_deg,sided,status,note
+S001,rect,1.629,0.8,3.258,4.0,0,single,pending,template: one rectangular groove
+S002,trapezoid,2.0,0.5,3.258,4.0,0,single,pending,template: 60deg sidewall
+S003,cross,1.2,0.8,3.258,4.0,0,double,pending,template: crossed trenches

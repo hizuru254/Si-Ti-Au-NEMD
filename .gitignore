@@ -6,3 +6,6 @@ logs/
 structures/
 anchor/workspace/
 validation/workspace/*/*/screen.err.txt
+_test/
+config/.runner_*
+optimization/

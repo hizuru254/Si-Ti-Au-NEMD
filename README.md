@@ -27,6 +27,7 @@
 | 工具链演练 | `tools/selftest.py` **PASS**（Cu 768 原子，QC `n_valid=3`） |
 | 锚点结构 | 平面 v1：36,072 原子，Si(001)/Ti(hcp)/Au/Ti/Si，G0 **READY** |
 | 锚点试运行 | 3k 步稳定（无 Lost atoms，drift 9e-6，TBR 3.0e-8）；正式 3×120k 待启动（约 5.7 h） |
+| 自动搜索框架 | `scan_runner` / `optimize` / `report_candidates` 已实现，1 点 pilot 端到端跑通 |
 | 三元素验证 | `Si/Ti/Au/Ti/Si` 1856 原子，3 seed × 30000 步，全部 exit 0；QC 按预期 FAIL |
 | 形状预览 | 7 个 `Si/Ti/Au/Ti/Si` 初始结构，约 21k 原子，见 `shapes/` |
 
@@ -65,7 +66,8 @@ $PY = "C:\Users\<you>\...\python.exe"
 ├─ AGENT_MANUAL_V4.txt          # 已废弃：层序错误的旧版，仅作历史说明
 ├─ config/
 │  ├─ params.json               # 全局参数与阈值（单一事实源）
-│  ├─ scan.example.csv          # 扫描队列模板
+│  ├─ scan.example.csv          # 扫描队列模板（kind 列）
+│  ├─ search_space.example.json # 搜索空间/批准开关
 │  └─ potentials.lock.example.json
 ├─ templates/in.pattern.template
 ├─ tools/
@@ -73,6 +75,9 @@ $PY = "C:\Users\<you>\...\python.exe"
 │  ├─ geomlib.py                # 几何/数据文件校验
 │  ├─ preflight.py              # Gate 0：环境与输入契约
 │  ├─ new_run.py                # 建版（原子、不可覆盖）
+│  ├─ scan_runner.py            # 批量：scan -> build -> G0 -> run -> qc
+│  ├─ optimize.py               # GP/EI（或 LHS）提议下一批点
+│  ├─ report_candidates.py      # top-k 候选报告
 │  ├─ scan_status.py            # 只改 scan.csv 的 status 列
 │  ├─ run_seed.ps1              # 单 seed 启动器（Windows）
 │  ├─ run_seed.sh               # 单 seed 启动器（WSL，未验证）
@@ -143,6 +148,31 @@ powershell -ExecutionPolicy Bypass -File D:\si_nemd\anchor\start_anchor.ps1
 ```
 
 日志：`anchor\workspace\anchor_run.log`；结果：`anchor\workspace\run_vNNN\report.txt`。
+
+## 自动搜索（代码已就绪，待锚点与空间批准）
+
+```powershell
+# 1) 批准搜索空间：把 config/search_space.json 的 approved 改为 true
+# 2) 提议下一批点（<5 个有效点用 LHS，>=5 用 GP+EI）
+python tools/optimize.py --summary workspace/scan_summary.csv `
+  --space config/search_space.json --scan-csv config/scan.csv `
+  --out config/scan.next.csv --n-propose 8
+
+# 3) 批量跑（--pilot 为 1 seed/5k 步；正式去掉 --pilot）
+python tools/scan_runner.py --config config/params.json `
+  --scan-csv config/scan.next.csv --potentials config/potentials.in `
+  --space config/search_space.json --pilot --max-points 1
+
+# 4) 生成候选报告
+python tools/report_candidates.py --summary workspace/scan_summary.csv `
+  --out optimization/candidates.md
+```
+
+- `scan_runner` 自动完成：生成结构 → G0 → 建版 → 跑种子 → 后处理 → QC → 更新
+  `scan.csv` 状态与 `workspace/scan_summary.csv`；失败点记 `failed`，不重试、不改阈值。
+- 未批准的空间（`approved=false`）或越界点会被拒绝；只有 `--allow-draft` 才放行 DRAFT。
+- **运行根必须纯 ASCII**：`C:\Users\绯鹤\...` 会让 Python→PowerShell 的参数乱码
+  （已实测 `run_seed.ps1` 找不到中文路径），请用 `D:\si_nemd`。
 
 ## 已知限制
 

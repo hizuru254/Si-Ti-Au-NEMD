@@ -124,6 +124,10 @@ def groove_depth(x: np.ndarray, y: np.ndarray, spec: dict) -> np.ndarray:
     if kind == "flat":
         return np.zeros_like(x, dtype=float)
     P, W, D = spec["P"], spec["W"], spec["D"]
+    if kind == "rot45":
+        ang = math.radians(45.0)
+        d = np.mod(x * math.cos(ang) + y * math.sin(ang), P)
+        return np.where(d < W, D, 0.0)
     if kind == "rect":
         if spec["phi"] == 0.0:
             d = np.mod(x, P)
