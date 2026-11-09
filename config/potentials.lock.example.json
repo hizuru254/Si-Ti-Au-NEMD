@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "status": "DRAFT",
+  "note": "复制为 config/potentials.lock.json，填入真实 sha256 后由人类改为 APPROVED。Agent 不得自行批准。",
+  "files": {
+    "potentials.in": {
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "note": "pair_style / pair_coeff 文件；每个改动都必须新建 run_vNNN"
+    },
+    "Si.tersoff": {"sha256": "", "note": ""},
+    "Ti.meam.spline": {"sha256": "", "note": ""},
+    "Au_u3.eam": {"sha256": "", "note": ""}
+  },
+  "bulk_validation": {
+    "checked_at": "",
+    "lattice_constant_rel_error": null,
+    "C11_rel_error": null,
+    "C12_rel_error": null,
+    "C44_rel_error": null,
+    "verdict": "PENDING",
+    "note": "体性质校验由人类脚本完成；Agent 只核对 verdict 与时间戳"
+  }
+}

@@ -1,0 +1,13 @@
+﻿{
+    "schema_version":  "1.0",
+    "seed":  2002,
+    "command":  "D:/LAMMPS/LAMMPS 64-bit 4Jul2026-MSMPI/bin/lmp.exe -in in.pattern -log log.pattern",
+    "launch_mode":  "serial",
+    "mpi_ranks":  16,
+    "omp_threads":  1,
+    "started_at":  "2026-11-09T23:24:37.4923167+08:00",
+    "wall_time_s":  97.31,
+    "timed_out":  false,
+    "exit_code":  0,
+    "host":  "LAPTOP-HIZURU"
+}

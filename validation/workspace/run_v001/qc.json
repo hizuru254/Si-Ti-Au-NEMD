@@ -1,0 +1,95 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run_v001",
+  "scan": {
+    "scan_id": "VAL001",
+    "W_nm": "0",
+    "D_nm": "0",
+    "P_nm": "0",
+    "t_nm": "0",
+    "phi_deg": "0",
+    "sided": "single",
+    "status": "pending",
+    "note": "pipeline validation Si/Ti/Au/Ti/Si flat stack"
+  },
+  "per_seed": {
+    "seed_1001": {
+      "valid": false,
+      "tbr_total_m2KW": 1.264833668301021e-06,
+      "dT_total_K": 381.83140621666655,
+      "checks": {
+        "parse_ok": true,
+        "exit_zero": true,
+        "log_complete": true,
+        "no_lost_atoms": true,
+        "minimize_converged": true,
+        "net_flux_zero": true,
+        "flux_symmetry": true,
+        "toteng_drift": true,
+        "dT_signal": true,
+        "fit_quality": false,
+        "tbr_in_range": true,
+        "time_converged": false,
+        "temp_stable": true,
+        "log_unmodified": true
+      }
+    },
+    "seed_2002": {
+      "valid": false,
+      "tbr_total_m2KW": 1.1820680540464365e-06,
+      "dT_total_K": 356.8458988972227,
+      "checks": {
+        "parse_ok": true,
+        "exit_zero": true,
+        "log_complete": true,
+        "no_lost_atoms": true,
+        "minimize_converged": true,
+        "net_flux_zero": true,
+        "flux_symmetry": true,
+        "toteng_drift": true,
+        "dT_signal": true,
+        "fit_quality": false,
+        "tbr_in_range": true,
+        "time_converged": false,
+        "temp_stable": true,
+        "log_unmodified": true
+      }
+    },
+    "seed_3003": {
+      "valid": false,
+      "tbr_total_m2KW": 1.3013705788558367e-06,
+      "dT_total_K": 392.86126752222253,
+      "checks": {
+        "parse_ok": true,
+        "exit_zero": true,
+        "log_complete": true,
+        "no_lost_atoms": true,
+        "minimize_converged": true,
+        "net_flux_zero": true,
+        "flux_symmetry": true,
+        "toteng_drift": true,
+        "dT_signal": true,
+        "fit_quality": false,
+        "tbr_in_range": true,
+        "time_converged": false,
+        "temp_stable": true,
+        "log_unmodified": true
+      }
+    }
+  },
+  "group_checks": {
+    "manifest_ok": true,
+    "all_seeds_valid": false,
+    "n_valid_ge_3": false,
+    "relstd_ok": false,
+    "geom_approved": true
+  },
+  "n_valid": 0,
+  "n_seeds": 3,
+  "TBR_mean_m2KW": null,
+  "TBR_std_m2KW": null,
+  "TBR_relstd": null,
+  "is_passed": false,
+  "note": "all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged; seed_2002:fit_quality/time_converged; seed_3003:fit_quality/time_converged",
+  "checked_at": "2026-11-09T23:27:52+08:00"
+}

@@ -1,0 +1,380 @@
+﻿================================================================================
+文件名称: AGENT_MANUAL_V5_WSL.txt
+版本    : 5.0-wsl（未验证版）
+生效日期: 2026-11-09
+适用机器: 另一台机器（Windows 11 + WSL2 Ubuntu 22.04 + LAMMPS 29Sep2021
+          + AMD EPYC 9684X 96 核 + 576 GB RAM + RTX 4090）
+文件性质: 该机器的执行依据；结构与判据完全沿用 V5-WIN
+配套文档: AGENT_MANUAL_V5_WIN.txt（本机已验证版，权威结构）
+================================================================================
+
+【0. 先读这段：这份文档的可信度边界】
+
+  本文件**没有在目标机器上逐条执行过**。目标机器的 WSL2、LAMMPS 29Sep2021、
+  96 核 MPI 环境都来自 PPT 描述，我无法访问。
+  因此：
+
+    - 结构、判据、门禁、异常分类、汇报模板：与 V5-WIN 完全相同，可直接用。
+    - 所有带 [未验证] 的命令：必须先在目标机跑通，才能用于生产。
+    - 第一次使用顺序（强制）：
+        (1) 跑 G0（preflight）——验证路径、LAMMPS、势函数、模板；
+        (2) 跑 selftest.py（Cu 玩具，3 种子 × 2000 步）——验证工具链；
+        (3) 用一个**单元素 Si** 的短算例（2000 步）验证 MPI 扩展性；
+        (4) 再上三元素叠层。
+      任何一步失败 -> 停下来修环境，不要直接跑生产。
+
+  如果目标机实际不是 WSL2（例如也是 Windows 原生），就不要用本文件，
+  直接用 V5-WIN，只改 params.json 里的路径与核数。
+
+================================================================================
+
+【一、环境差异总表（V5-WIN -> V5-WSL）】
+
+  项目            V5-WIN（已验证）                     V5-WSL（待验证）
+  --------------  -----------------------------------  -------------------------------
+  系统            Windows 11 原生                       Windows 11 + WSL2 Ubuntu 22.04
+  Shell           Windows PowerShell 5.1               bash（在 WSL 内）
+  LAMMPS          D:\LAMMPS\...\lmp.exe (4Jul2026)      /usr/local/bin/lmp (29Sep2021)
+  MPI             MS-MPI，error 5，不可用               OpenMPI/MPICH，应可用 [未验证]
+  核数            32 逻辑核（会话可见）                 96 核 / 192 线程
+  启动方式        lmp.exe 直接串行                      mpirun -np N lmp -in ...
+  项目根          D:\si_nemd                            /home/<user>/si_nemd
+  势函数目录      D:\LAMMPS\Tersoff                    <LAMMPS 源码或安装>/potentials
+  Python          3.12.14（DSH 自带）                   python3 + numpy [未验证]
+  启动器          tools\run_seed.ps1                   tools/run_seed.sh [未验证]
+  路径大小写      不敏感                                区分大小写
+  换行            CRLF 可接受                          必须 LF（dos2unix）
+
+  相同点（不要改）：
+    目录结构、命名、三个 JSON、模板占位符、16 个 token、fix heat 写法、
+    profile 格式、TBR 定义、阈值、CSV 表头、异常分类、HITL。
+
+================================================================================
+
+【二、目录与部署】
+
+2.1 目标目录
+
+    /home/<user>/si_nemd/
+    ├─ config\{params.json, scan.csv, potentials.lock.json}
+    ├─ templates/in.pattern.template
+    ├─ tools\{geomlib.py, preflight.py, new_run.py, scan_status.py,
+    │         postprocess.py, qc_check.py, selftest.py, run_seed.sh}
+    ├─ examples\...
+    ├─ logs\preflight_report.json
+    └─ workspace\run_vNNN\...
+
+    不要放在 /mnt/c 下跑生产：跨文件系统 I/O 会显著拖慢 LAMMPS 日志与
+    write_data。应放在 WSL 的 ext4 家目录。
+
+2.2 从本机拷贝
+
+    # 在 Windows PowerShell（本机）：
+    scp -r "C:\Users\绯鹤\Desktop\si_nemd" <user>@<host>:/home/<user>/si_nemd
+
+    # 或先打包：
+    tar -czf si_nemd.tgz si_nemd
+
+    拷完后在 WSL 内：
+      cd ~/si_nemd
+      find . -type f -name "*.ps1" -delete        # 删除 PowerShell 启动器
+      find . -type f \( -name "*.py" -o -name "*.txt" -o -name "*.json" \
+                       -o -name "*.csv" -o -name "*.template" \) -exec dos2unix {} +
+      chmod +x tools/*.sh 2>/dev/null
+
+    [未验证] dos2unix 可能未安装：sudo apt install dos2unix。
+
+2.3 路径大小写
+
+    Ubuntu 区分大小写。模板里的 `read_data ../structure.data`、
+    `include ../potentials.in` 必须与实际文件名完全一致。
+    建议所有文件名保持全小写或当前写法，不要混用。
+
+================================================================================
+
+【三、params.json 的差异（只改这些）】
+
+  {
+    "project_root": "..",
+    "lammps": {
+      "exe": "/usr/local/bin/lmp",
+      "mpiexec": "/usr/bin/mpirun",
+      "version_marker": "LAMMPS (29 Sep 2021",
+      "launch_mode": "mpi",
+      "mpi_ranks": 16,
+      "omp_threads": 1
+    },
+    "potentials_dir": "/home/<user>/si_nemd/potentials",
+    "seeds": [1001, 2002, 3003],
+    "paths": {"workspace": "workspace"}
+  }
+
+  [未验证] lmp 的实际路径：`which lmp` 或 `which lmp_mpi`。
+  [未验证] 版本字符串：`lmp -h | head -1`，按实际输出改 version_marker。
+  如果没有 `lmp` 只有 `lmp_mpi`，把 exe 改成 `/usr/local/bin/lmp_mpi`。
+
+  96 核的核数选择：
+    - 先做 1/2/4/8/16 的扩展性测试（见第七节）；
+    - 18k 原子体系，16 ranks 通常接近最优；
+    - 3 个 seed 并发 = 48 ranks，剩余核留给系统与 I/O；
+    - 也可以 6 个并发 × 16 ranks（若扫描队列足够长），但同一 run 的三个
+      seed 建议同时启动，减少批次间漂移。
+
+================================================================================
+
+【四、命令翻译表（WIN -> WSL）】
+
+  动作              V5-WIN                                      V5-WSL
+  ----------------  ------------------------------------------  ------------------------------
+  设置 UTF-8        chcp 65001; $env:PYTHONIOENCODING="utf-8"  export PYTHONIOENCODING=utf-8
+  Python            & $PY .\tools\preflight.py ...             python3 tools/preflight.py ...
+  路径分隔           .\tools\preflight.py                       tools/preflight.py
+  多行续行          `（反引号）                                 \（反斜杠）
+  启动 seed         powershell -File tools\run_seed.ps1 ...    bash tools/run_seed.sh ...
+  LAMMPS            "D:\...\lmp.exe" -in in.pattern            mpirun -np 16 lmp -in in.pattern
+  日志               -log log.pattern                           同
+  干跑               -skiprun -in in.pattern                    同
+  查进程            Get-Process lmp                             ps aux | grep lmp
+  超时              Start-Process + WaitForExit                 timeout 86400 mpirun ...
+  文本换行          CRLF                                        LF
+
+  Agent 在 Windows 上驱动 WSL 时，统一用：
+    wsl.exe -d Ubuntu-22.04 --cd /home/<user>/si_nemd -- bash -lc "<命令>"
+  [未验证] 发行版名字以 `wsl -l -v` 为准，可能是 Ubuntu-22.04 或 Ubuntu。
+
+================================================================================
+
+【五、run_seed.sh（替代 run_seed.ps1，未验证）】
+
+  放到 tools/run_seed.sh，chmod +x：
+
+  #!/usr/bin/env bash
+  set -euo pipefail
+  RUN_DIR="${1:?usage: run_seed.sh <run_dir> <seed>}"
+  SEED="${2:?usage: run_seed.sh <run_dir> <seed>}"
+  SEED_DIR="$RUN_DIR/seed_$SEED"
+  [[ -d "$SEED_DIR" ]] || { echo "missing $SEED_DIR" >&2; exit 2; }
+  [[ -f "$SEED_DIR/in.pattern" ]] || { echo "missing in.pattern" >&2; exit 2; }
+  [[ -e "$SEED_DIR/log.pattern" ]] && { echo "log exists, refuse" >&2; exit 2; }
+
+  PARAMS="$RUN_DIR/params.snapshot.json"
+  LAUNCH=$(python3 -c "import json;print(json.load(open('$PARAMS'))['lammps']['launch_mode'])")
+  NP=$(python3 -c "import json;print(json.load(open('$PARAMS'))['lammps']['mpi_ranks'])")
+  OMP=$(python3 -c "import json;print(json.load(open('$PARAMS'))['lammps']['omp_threads'])")
+  TIMEOUT=$(python3 -c "import json;print(json.load(open('$PARAMS'))['timeouts_s']['seed'])")
+  export OMP_NUM_THREADS="$OMP"
+
+  cd "$SEED_DIR"
+  START=$(date +%s)
+  if [[ "$LAUNCH" == "mpi" ]]; then
+    timeout "$TIMEOUT" mpirun -np "$NP" --bind-to core lmp -in in.pattern -log log.pattern \
+      > screen.txt 2> screen.err.txt
+  else
+    timeout "$TIMEOUT" lmp -in in.pattern -log log.pattern \
+      > screen.txt 2> screen.err.txt
+  fi
+  CODE=$?
+  END=$(date +%s)
+  python3 - "$SEED" "$CODE" "$((END-START))" <<'PY'
+  import json,sys
+  seed,code,wall=sys.argv[1],int(sys.argv[2]),float(sys.argv[3])
+  json.dump({"schema_version":"1.0","seed":int(seed),"exit_code":code,
+             "wall_time_s":wall,"timed_out":code==124},
+            open("run_meta.json","w"),indent=2)
+  PY
+  echo "[RUN] $SEED_DIR exit=$CODE wall=$((END-START))s"
+  exit "$CODE"
+
+  [未验证] `--bind-to core` 是 OpenMPI 语法；若是 MPICH 用 `-bind-to core`
+  或省略。`timeout` 返回 124 表示超时，与 WIN 版约定一致。
+  [未验证] Python 在这里只做 JSON 读取，numpy 不是必需，但 postprocess 需要。
+
+================================================================================
+
+【六、LAMMPS 29Sep2021 的注意点】
+
+  6.1 包（PPT 写的：MANYBODY、MEAM、EXTRA-PAIR、MOLECULE）
+      - Tersoff（MANYBODY）可用；
+      - EAM（MANYBODY）可用；
+      - meam/spline 需要 MEAM + MANYBODY；
+      - 用 `lmp -h | grep -i package` 或 `lmp -in in.empty` 的 package 列表确认。
+      [未验证] 如果 29Sep2021 的 meam/spline 行为与 4Jul2026 不同，
+      以目标机实测为准，并更新本文件。
+
+  6.2 命令兼容性
+      read_data / include / print / fix heat / fix ave/chunk / compute chunk/atom /
+      minimize / min_modify / reset_timestep / velocity create / fix nvt / fix nve
+      都是长期存在的命令，29Sep2021 应可用。 [未验证]
+      `-skiprun`、`-log`、`-in`、`-screen` 同样长期存在。 [未验证]
+
+  6.3 数值差异
+      不同 LAMMPS 版本、不同 MPI、不同编译器会导致轨迹不可逐位复现。
+      **不同机器的结果不能当成同一次运行**；比较 TBR 时必须在同一台机器
+      上用相同 seed 重算，或明确标注机器与版本。
+      目标机的 TBR 与本机不会完全一致，这是正常的。
+
+================================================================================
+
+【七、MPI 扩展性测试（第一次必做，未验证）】
+
+  目的：选每个 seed 的 ranks 数，不是越大越好。
+
+  步骤：
+    1) 准备一个 2000 步的短输入（可用 S001 的模板，改 N_EQUIL/N_PROD）；
+    2) 分别用 1/2/4/8/16/32 ranks 跑同一个 seed；
+    3) 记录 wall time 与 steps/s；
+    4) 选“steps/s 最高且每核效率 >=60%”的点；
+    5) 把结果写进 config/benchmark.md，params.lammps.mpi_ranks 用该值。
+
+  预期（仅作参考，不是判据）：
+    18k 原子体系，16 ranks 相对 1 rank 应有 8–14 倍加速；
+    若只有 2–3 倍，说明通信/邻居表瓶颈，改用更少 ranks 或调整
+    `neighbor`/`comm_modify`，不要硬上 16。
+
+  并发：
+    3 seeds × 16 ranks = 48 ranks，占 96 核的一半；
+    可同时跑两个 run（6 seeds × 16 = 96），但会争内存带宽，
+    先测吞吐再决定。
+
+================================================================================
+
+【八、WSL2 系统层注意事项（未验证）】
+
+  8.1 内存
+      WSL2 默认最多用宿主内存的 50%。576 GB 机器上默认约 288 GB，
+      对 18–37k 原子足够。若需调整，在 C:\Users\<user>\.wslconfig：
+        [wsl2]
+        memory=400GB
+        processors=96
+      改完 `wsl --shutdown` 再启动。
+
+  8.2 文件系统
+      生产目录放 ext4（/home），不要放 /mnt/c。
+      /mnt/c 的 9p 文件系统会让 write_data 和日志慢数倍。
+
+  8.3 行尾
+      Windows 上编辑的 .sh / .py 可能带 CRLF，bash 会报
+      `$'\r': command not found`。用 dos2unix 或
+      `sed -i 's/\r$//' file`。
+
+  8.4 权限
+      run_seed.sh 必须 chmod +x；否则用 `bash tools/run_seed.sh` 调用。
+
+  8.5 时钟
+      WSL2 休眠后时钟可能漂移，长跑前 `sudo hwclock -s` 或在 Windows
+      侧同步时间；日志里的 wall time 以 LAMMPS 自身为准。
+
+================================================================================
+
+【九、第一次上机检查清单（按顺序，全部通过才生产）】
+
+  [ ] wsl -l -v 显示 Ubuntu-22.04 Running
+  [ ] which lmp / lmp -h 显示 29Sep2021 与所需 package
+  [ ] python3 -c "import numpy; print(numpy.__version__)"
+  [ ] 拷贝后的目录结构正确，无 CRLF
+  [ ] preflight.py 在 validation 工程上 READY
+  [ ] selftest.py PASS（Cu 玩具）
+  [ ] 单元素 Si 短算例 2000 步：exit 0、无 Lost atoms
+  [ ] MPI 扩展性测试完成，mpi_ranks 已写入 params
+  [ ] 三元素叠层 3 seed × 30000 步：exit 0、无 Lost atoms
+  [ ] QC 能产出 report.txt 与 tbr_result.csv（PASS 或 FAIL 都算跑通）
+  [ ] 故意把 geom.status 改 DRAFT，preflight 必须 BLOCKED
+  [ ] 故意改 log 一个字节，qc_check 必须报 log_unmodified=False
+
+  以上任何一项失败 -> 不要开始生产扫描；按 V5-WIN 第十一节分类处理。
+
+================================================================================
+
+【十、与 V5-WIN 的判据一致性（不要改）】
+
+  以下内容与 V5-WIN 完全相同，本文件不重复正文，只列清单：
+
+    - 16 个模板占位符与契约行
+    - 层序：Si(substrate)/Ti/Au/Ti/Si，geom.layers 从下到上必须是 Si→Ti→Au→Ti→Si
+    - geom Q1–Q8（含两端真空 >=5 Å）
+    - q 从日志 GEOM 行读取
+    - ΔT 线性外推、TBR_total=ΣdT/q
+    - R²>=0.995、>=4 点、窗口宽度 >=6 Å
+    - TotEng 漂移 <=1%（40–50% vs 90–100%）
+    - dT_total>5 K、时间收敛 <=5%、三 seed relstd <=10%
+    - TBR 量级 1e-11..1e-7
+    - A/B/C 异常分类与停机报告格式
+    - tbr_result.csv 表头（18 列，前 9 列与 V3 一致）
+    - HITL H1–H6、代理模型回验规则
+
+  阈值在 config/params.json，两台机器必须一致；如果目标机需要不同阈值，
+  必须人类批准并记录，不得 Agent 自改。
+
+================================================================================
+
+【十一、已知风险（目标机特有）】
+
+  R1 WSL2 + 96 核的 MPI 绑定
+     `mpirun` 默认可能把进程绑到超线程或跨 NUMA，导致扩展性差。
+     先测 `--bind-to core`、`--map-by socket` 等组合，写进 run_seed.sh。
+
+  R2 LAMMPS 29Sep2021 的势函数库
+     目标机的 potentials 目录可能与本机不同（文件名/日期）。
+     potentials.lock.json 必须用**目标机实际文件**的 sha256 重新生成，
+     不能把本机的 lock 拷过去。
+
+  R3 GPU
+     RTX 4090 对这类 NEMD 没有直接帮助；除非人类明确要求 GPU 包，
+     否则用 CPU MPI，不要启用 `-sf gpu`。
+
+  R4 机器差异
+     本机验证的是“流程”，不是“数值”。目标机的 TBR 不能与本机数字
+     直接比较；必须各自完成 G0 + selftest + 试点。
+
+  R5 版本差异
+     29Sep2021 与 4Jul2026 的 `fix heat` 标量语义可能不同。
+     第一次跑完后，检查 f_hot/f_cold 是否恒为 ~1；若不是，按实际
+     修正附录 C 的解释，但**不要**用 f_hot 反算 q。
+
+================================================================================
+
+【十二、快速开始（目标机，逐步复制执行）】
+
+  # 0) 进入 WSL 项目目录
+  cd ~/si_nemd
+
+  # 1) 环境自检
+  export PYTHONIOENCODING=utf-8
+  python3 tools/selftest.py
+
+  # 2) 验证工程 G0（把 params 里的路径改成目标机实际值）
+  python3 tools/preflight.py \
+      --config validation/params.json \
+      --geom validation/geom.json \
+      --structure validation/structure.data \
+      --potentials validation/potentials.in \
+      --dry-run
+
+  # 3) 建版
+  python3 tools/new_run.py --config validation/params.json --scan-id VAL001 \
+      --geom validation/geom.json --structure validation/structure.data \
+      --potentials validation/potentials.in --scan-csv validation/scan.csv
+
+  # 4) 三种子（先只跑 1001）
+  bash tools/run_seed.sh validation/workspace/run_v001 1001
+
+  # 5) 取证与门禁
+  python3 tools/postprocess.py --run-dir validation/workspace/run_v001 --seed seed_1001
+  python3 tools/qc_check.py --run-dir validation/workspace/run_v001
+
+  说明：第 2 步依赖 validation/potentials.lock.json 里是**目标机**的哈希；
+  在目标机第一次跑之前，用 `sha256sum` 重新生成 lock，并把 status 改为
+  APPROVED（人类批准）。
+
+================================================================================
+
+【十三、变更记录】
+
+  V5-wsl  2026-11-09
+    - 从 V5-WIN 派生，只改环境相关部分
+    - 新增 run_seed.sh、MPI 扩展性测试、WSL2 系统注意点
+    - 全部命令标记 [未验证]，附首次上机检查清单
+
+================================================================================
+文档结束。目标机第一次使用前，先读第 0 节与第九节。
+================================================================================

@@ -1,0 +1,2 @@
+﻿timestamp,run_id,scan_id,state,TBR_mean,TBR_relstd,n_valid,is_passed,note
+2026-11-09T23:27:52+08:00,run_v001,VAL001,QC_FAILED,,,0,False,all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged; seed_2002:fit_quality/time_converged; seed_3003:fit_quality/time_converged

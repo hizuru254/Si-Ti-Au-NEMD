@@ -1,0 +1,2 @@
+scan_id,W_nm,D_nm,P_nm,t_nm,phi_deg,sided,status,note
+VAL001,0,0,0,0,0,single,pending,pipeline validation Si/Ti/Au/Ti/Si flat stack

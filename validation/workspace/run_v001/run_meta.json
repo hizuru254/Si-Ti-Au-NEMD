@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run_v001",
+  "scan": {
+    "scan_id": "VAL001",
+    "W_nm": "0",
+    "D_nm": "0",
+    "P_nm": "0",
+    "t_nm": "0",
+    "phi_deg": "0",
+    "sided": "single",
+    "status": "pending",
+    "note": "pipeline validation Si/Ti/Au/Ti/Si flat stack"
+  },
+  "geometry": {
+    "geometry_id": "validation_SiTiAuTiSi_fcc16",
+    "status": "APPROVED",
+    "sha256": "0f4ada5c710452404e713b2b1d9512619f1515acf292398222b687050d4cb669"
+  },
+  "inputs": {
+    "structure": {
+      "path": "D:\\si_nemd\\validation\\structure.data",
+      "sha256": "aa5023e0847fbbf24cda6891ca02ce52e9fd3893e4b30a1c2e73ff38ec8a0a67"
+    },
+    "potentials": {
+      "path": "D:\\si_nemd\\validation\\potentials.in",
+      "sha256": "effdb18137f36e8eb032450aa1d7c7993b6eb2ab5102f293912f2e1e2c01346b"
+    },
+    "template": {
+      "path": "D:\\si_nemd\\templates\\in.pattern.template",
+      "sha256": "5499903629f38c3a14865b6b7f8295b0b519fdae53040db9c8987fa84b1e1e3b"
+    },
+    "params": {
+      "path": "D:\\si_nemd\\validation\\params.json",
+      "sha256": "0613a61f4199859da77844b1e69600c8f4fcf30a871d91cb66f8225c416d4ca0"
+    }
+  },
+  "seeds": [
+    1001,
+    2002,
+    3003
+  ],
+  "seed_dirs": [
+    "seed_1001",
+    "seed_2002",
+    "seed_3003"
+  ],
+  "launch_mode": "serial",
+  "state": "CREATED",
+  "created_at": "2026-11-09T23:22:56+08:00",
+  "host": "LAPTOP-HIZURU",
+  "platform": "Windows-11-10.0.26300-SP0"
+}

@@ -1,0 +1,8 @@
+﻿id,label,kind,P_A,W_A,D_A,side,phi_deg,n_atoms,n_si,n_ti,n_au,file
+S0_flat,flat baseline,flat,0.0,0.0,0.0,single,0.0,20962,8640,1058,11264,S0_flat.data
+S1_rect,rectangular W16.3 D8 P32.6,rect,32.58,16.29,8.0,single,0.0,21179,7920,1008,12251,S1_rect.data
+S2_deep,deep narrow W8.1 D14 P32.6,rect,32.58,8.145,14.0,single,0.0,21071,7860,1044,12167,S2_deep.data
+S3_trapezoid,trapezoid W20 D5 60deg,trapezoid,32.58,20.0,5.0,single,0.0,21050,8328,1058,11664,S3_trapezoid.data
+S4_double,double-sided W16.3 D8,rect,32.58,16.29,8.0,double,0.0,21298,7056,995,13247,S4_double.data
+S5_rot45,rotated 45deg W16.3 D8,rect,32.58,16.29,8.0,single,45.0,21154,7850,1024,12280,S5_rot45.data
+S6_cross,crossed trenches W12 D8,cross,32.58,12.0,8.0,single,0.0,21235,7780,987,12468,S6_cross.data
