@@ -1,0 +1,40 @@
+{
+  "approved": false,
+  "note": "把 approved 改为 true 才会开扫；范围之外的点会被 scan_runner 拒绝。",
+  "kind": [
+    "rect",
+    "trapezoid",
+    "cross",
+    "rot45"
+  ],
+  "W_nm": [
+    0.8,
+    2.4
+  ],
+  "D_nm": [
+    0.2,
+    0.8
+  ],
+  "P_nm": [
+    2.0,
+    4.0
+  ],
+  "t_nm": [
+    3.0,
+    5.0
+  ],
+  "phi_deg": [
+    0,
+    90
+  ],
+  "sided": [
+    "single",
+    "double"
+  ],
+  "max_D_A": 8.0,
+  "fixed": {
+    "ti_A": 24.0,
+    "si_A": 40.0,
+    "bin_A": 2.0
+  }
+}
