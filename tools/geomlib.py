@@ -226,6 +226,7 @@ def validate_geom(geom: dict, thresholds: dict, allow_draft: bool = False,
     min_pts = int(thresholds.get("fit_min_points", 4))
     bin_a = float(bin_a if bin_a is not None else geom.get("chunk_bin_A", 2.0))
     zs = []
+    wins = []
     for k, itf in enumerate(interfaces):
         name = itf.get("id", f"iface{k}")
         try:
@@ -250,6 +251,7 @@ def validate_geom(geom: dict, thresholds: dict, allow_draft: bool = False,
             if whi <= wlo:
                 errors.append(f"界面 {name}.{side} 窗口上下界颠倒")
                 continue
+            wins.append((name, side, wlo, whi))
             width = whi - wlo
             if width < min_w:
                 errors.append(
@@ -303,6 +305,21 @@ def validate_geom(geom: dict, thresholds: dict, allow_draft: bool = False,
         for b in range(a + 1, len(zs)):
             if _close(zs[a], zs[b]):
                 errors.append(f"界面 z 重复：{zs[a]}")
+
+    # Q9: different interfaces must not share/overlap a fit window.
+    # Otherwise the same bins are fitted twice and the per-interface TBR is not
+    # identifiable (e.g. a 20 Å Ti layer with two 16 Å Ti-side windows).
+    for i in range(len(wins)):
+        ni, si, li, hi = wins[i]
+        for j in range(i + 1, len(wins)):
+            nj, sj, lj, hj = wins[j]
+            if ni == nj:
+                continue
+            if max(li, lj) < min(hi, hj) - 1e-6:
+                errors.append(
+                    f"Q9 窗口重叠：{ni}.{si} [{li:.2f},{hi:.2f}] 与 "
+                    f"{nj}.{sj} [{lj:.2f},{hj:.2f}]；不同界面不能共用同一段拟合窗口"
+                )
 
     groups = geom.get("groups") or {}
     hot, cold = groups.get("hot"), groups.get("cold")

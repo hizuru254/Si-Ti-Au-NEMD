@@ -219,14 +219,14 @@ def make_geom(spec: dict, meta: dict) -> dict:
     z_au, z_st, z_out = meta["z_au"], meta["z_si_ti"], meta["z_si_out"]
     D = spec["D"]
     # top Ti window sits above the deepest groove
-    ti_top_lo = z_au + D + 2.0
-    ti_top_hi = z_st - 2.0
-    ti_bot_hi = -z_au - D - 2.0
-    ti_bot_lo = -z_st + 2.0
+    ti_au_lo = z_au + D + 2.0
+    ti_au_hi = z_au + 18.0
+    ti_au_bot_hi = -z_au - D - 2.0
+    ti_au_bot_lo = -z_au - 18.0
     windows = {
         "Si_Ti_L": ([-z_st - 2.0, -z_st - 18.0], [-z_st + 2.0, -z_st + 18.0]),
-        "Ti_Au_L": ([ti_bot_lo, ti_bot_hi], [-z_au + 2.0, -z_au + 18.0]),
-        "Au_Ti_R": ([z_au - 18.0, z_au - 2.0], [ti_top_lo, ti_top_hi]),
+        "Ti_Au_L": ([ti_au_bot_lo, ti_au_bot_hi], [-z_au + 2.0, -z_au + 18.0]),
+        "Au_Ti_R": ([z_au - 18.0, z_au - 2.0], [ti_au_lo, ti_au_hi]),
         "Ti_Si_R": ([z_st - 18.0, z_st - 2.0], [z_st + 2.0, z_st + 18.0]),
     }
     return {
@@ -251,11 +251,11 @@ def make_geom(spec: dict, meta: dict) -> dict:
              "left":  {"z_min": -z_st - 18.0, "z_max": -z_st - 2.0, "material": "Si"},
              "right": {"z_min": -z_st + 2.0,  "z_max": -z_st + 18.0, "material": "Ti"}},
             {"id": "Ti_Au_L", "z": -z_au,
-             "left":  {"z_min": ti_bot_lo, "z_max": ti_bot_hi, "material": "Ti"},
+             "left":  {"z_min": ti_au_bot_lo, "z_max": ti_au_bot_hi, "material": "Ti"},
              "right": {"z_min": -z_au + 2.0, "z_max": -z_au + 18.0, "material": "Au"}},
             {"id": "Au_Ti_R", "z": z_au,
              "left":  {"z_min": z_au - 18.0, "z_max": z_au - 2.0, "material": "Au"},
-             "right": {"z_min": ti_top_lo, "z_max": ti_top_hi, "material": "Ti"}},
+             "right": {"z_min": ti_au_lo, "z_max": ti_au_hi, "material": "Ti"}},
             {"id": "Ti_Si_R", "z": z_st,
              "left":  {"z_min": z_st - 18.0, "z_max": z_st - 2.0, "material": "Ti"},
              "right": {"z_min": z_st + 2.0,  "z_max": z_st + 18.0, "material": "Si"}},
