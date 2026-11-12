@@ -1,0 +1,44 @@
+Re-rank of every run in anchor/workspace with the interface-model-free
+estimator tools/tbr_plane.py (TBR_eff = [T(-84A) - T(+84A)] / q), computed on
+the second half of each production segment.  No new MD was run.
+
+Notes:
+  * negative values (run_v001/v009/v010) are the early broken protocols whose
+    temperature gradient was inverted -- the estimator detects that correctly;
+  * protocol generations do not agree with each other (v1.3 5-8e-9,
+    v1.4/v1.5 1.3-1.4e-8, v1.6 1.5-1.6e-8) because the interface keeps coarsening
+    with time; only within one protocol are the numbers comparable;
+  * in v1.6 (the only properly equilibrated protocol) P350 is 6.2 % ABOVE flat.
+
+run       scan         W    D    P side      q proto     TBR_eff   +/-%
+run_v001  MPITEST      0    0    0 single    1        -3.932e-08   -0.9
+run_v010  PROBEE       0    0    0 single    1        -1.176e-08   -7.9
+run_v009  PROBED       0    0    0 single    1        -2.749e-09  -41.0
+run_v023  P250       1.2  0.6  2.5 single    3 1.3     2.784e-09   65.6
+run_v024  P350       1.2  0.6  3.5 single    3 1.3     5.436e-09    7.6
+run_v029  F000         0    0    0 single    3 1.3     5.817e-09    7.2
+run_v019  D020       1.6  0.2  3.0 single    3 1.3     6.665e-09    4.9
+run_v014  W080       0.8  0.6  3.0 single    3 1.3     6.853e-09    6.1
+run_v017  W200       2.0  0.6  3.0 single    3 1.3     7.018e-09    9.0
+run_v015  W120       1.2  0.6  3.0 single    3 1.3     7.041e-09    6.4
+run_v028  DBL160     1.6  0.6  3.0 double    3 1.3     7.238e-09    4.6
+run_v020  D040       1.6  0.4  3.0 single    3 1.3     7.408e-09    5.2
+run_v016  W160       1.6  0.6  3.0 single    3 1.3     7.422e-09    3.3
+run_v022  P200       1.2  0.6  2.0 single    3 1.3     7.445e-09    5.4
+run_v012  PROBEG2      0    0    0 single    1 1.3     8.198e-09    7.4
+run_v025  P400       1.2  0.6  4.0 single    3 1.3     8.294e-09    6.2
+run_v013  PROBEF2      0    0    0 single    3 1.3     8.844e-09    4.1
+run_v033  F1P350     1.2  0.6  3.5 single    1 1.3     1.196e-08    9.4
+run_v032  F1FLAT       0    0    0 single    1 1.3     1.317e-08    6.2
+run_v035  AEP350     1.2  0.6  3.5 single    1 1.5     1.333e-08    5.8
+run_v034  AEF000       0    0    0 single    1 1.5     1.359e-08    6.2
+run_v026  VALP350    1.2  0.6  3.5 single    3 1.3     1.371e-08    4.0
+run_v031  PEP350     1.2  0.6  3.5 single    3 1.4     1.389e-08    5.6
+run_v030  PEF000       0    0    0 single    3 1.4     1.446e-08    5.6
+run_v040  V16F3F       0    0    0 single    3 1.6     1.517e-08    1.9
+run_v038  V16F000      0    0    0 single    1 1.6     1.539e-08    3.4
+run_v041  V16F3P     1.2  0.6  3.5 single    3 1.6     1.540e-08    2.2
+run_v027  VALD040    1.6  0.4  3.0 single    3 1.3     1.549e-08    1.8
+run_v039  V16P350    1.2  0.6  3.5 single    1 1.6     1.634e-08    3.0
+run_v021  D080       1.6  0.8  3.0 single    3 1.3     1.859e-08    0.7
+run_v018  W240       2.4  0.6  3.0 single    3 1.3     2.006e-08    0.8
