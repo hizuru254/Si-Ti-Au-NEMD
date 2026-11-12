@@ -1,0 +1,9 @@
+scan_id,kind,W_nm,D_nm,P_nm,t_nm,phi_deg,sided,status,note
+S16FLAT,flat,0,0,0,4.0,0,single,pending,v1.6 flat reference
+S16W080,rect,0.8,0.6,3.0,4.0,0,single,pending,W low
+S16W160,rect,1.6,0.6,3.0,4.0,0,single,pending,W mid
+S16W200,rect,2.0,0.6,3.0,4.0,0,single,pending,W high (best in v1.3 scan)
+S16W240,rect,2.4,0.6,3.0,4.0,0,single,pending,W max (thin Ti wall)
+S16D040,rect,1.6,0.4,3.0,4.0,0,single,pending,D shallow
+S16D080,rect,1.6,0.8,3.0,4.0,0,single,pending,D deep
+S16P350,rect,1.2,0.6,3.5,4.0,0,single,pending,P350 (best in v1.3 screen)

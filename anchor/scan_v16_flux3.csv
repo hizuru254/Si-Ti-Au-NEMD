@@ -1,0 +1,3 @@
+scan_id,kind,W_nm,D_nm,P_nm,t_nm,phi_deg,sided,status,note
+V16F3F,flat,0,0,0,4.0,0,single,pending,v1.6 flux3 flat
+V16F3P,rect,1.2,0.6,3.5,4.0,0,single,pending,v1.6 flux3 P350
