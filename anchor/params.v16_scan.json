@@ -72,6 +72,6 @@
     "heat_n": 1,
     "equil": "regional NVT (z<zmid / z>zmid)",
     "flux_note": "1 eV/ps (canonical). 3 eV/ps was rejected: it drives interface degradation and a 55% time-convergence drift.",
-    "note": "v1.6 scan: in-run anneal, 80 ps warm-up, 150 ps measured, flux 3 eV/ps"
+    "note": "v1.6 scan: in-run anneal, 80 ps warm-up, 150 ps measured, flux 3 eV/ps, ranked with tools/tbr_plane.py"
   }
 }

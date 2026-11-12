@@ -314,36 +314,71 @@ rejected negative controls, not a publishable TBR.
 
 ---
 
-## 8. Protocol v1.3 (2026-11-12, WSL2 / 96-core)
+## 8. Protocol v1.6 and what the measurements actually show (2026-11-12, WSL2 / 96-core)
 
-The Windows-era protocol produced a temperature profile that was not linear
-(R^2 0.26-0.94) and, on the new machine, visibly inverted: the "-z" hot
-reservoir ended up colder than the "+z" cold reservoir. Four independent causes
-were isolated and fixed; potentials, layer order, the QC thresholds in
-`qc_check.py` and the flux definition were **not** touched.
+### 8.1 What was broken
+
+The Windows-era protocol produced a temperature profile that was neither linear
+nor monotonic (R^2 0.26-0.94) and, on the new machine, visibly inverted. Four
+independent causes were isolated; potentials, layer order, the flux definition
+and the QC thresholds in `qc_check.py` were **not** touched.
 
 | # | Cause | Evidence | Fix |
 |---|---|---|---|
-| R1 | `fix heat` N was the group size (1728) instead of the injection interval (1), so energy entered as 1.728 eV pulses every 1.728 ps | `src/fix_heat.cpp`; flux symmetry 2.3% | `heat 1 __FLUX__`; flux symmetry now 0.0000 |
-| R2 | reservoirs sat on the free Si surfaces, which heat to 600-750 K during NVT equilibration | per-region `compute temp` during equilibration | `build_geometry.py --res-inset 8` (reservoirs 8 A inside the slab) |
-| R3 | a single global NVT constrains only the *total* kinetic energy, so it cannot remove an internal gradient | two halves stayed 57 K apart after 100 ps NVT | template `in.pattern.v13.template`: regional NVT (`z<zmid` / `z>zmid`) |
-| R4 | the `R^2 >= 0.995` gate is unattainable at 1 eV/ps: the bulk drop inside a 16 A window is ~0.2 K while a 2 A bin carries ~1.2 K standard error | block statistics of 100 x 1 ps profile frames | report `TBR +- sigma` via `tools/tbr_uncertainty.py`; keep the gate as-is and report both |
+| R1 | `fix heat` N was the group size (1728) instead of the injection interval, so energy entered as 1.728 eV pulses every 1.728 ps | `src/fix_heat.cpp`; flux symmetry 2.3% | `heat 1 __FLUX__`; symmetry now 0.0000 |
+| R2 | reservoirs sat on the free Si surfaces, which heat to 600-750 K during equilibration | per-region `compute temp` | `build_geometry.py --res-inset 8` |
+| R3 | a single global NVT constrains only the total kinetic energy, so it cannot remove an internal gradient | two halves stayed 57 K apart after 100 ps | regional NVT (`in.pattern.v13.template`) |
+| R4 | `R^2 >= 0.995` is unattainable here: the bulk drop inside a 16 A window is ~0.2 K while a 2 A bin carries ~1.2 K standard error | 100 x 1 ps block statistics | report `TBR +- sigma`; the gate is kept and reported as FAIL |
+| R5 | the interfaces keep relaxing at 0.4-1.4 eV/ps at 300 K, comparable to the imposed flux | PotEng slope over 230 ps | anneal 300->700->300 K inside the run (`in.pattern.v16.template`) |
+| R6 | the first 100 ps after switching the flux on is a transient | half-to-half drift 30-60% | 80 ps flux warm-up, excluded from the measurement |
 
-**Linear-response check.** TBR is flux-independent within the error bars:
+### 8.2 Current protocol and what it reaches
 
-| run | q (W/m^2) | dT_total (K) | TBR (m^2K/W) |
-|---|---|---|---|
-| `run_v012` | 3.77e9 (1 eV/ps) | 7.30 +- 1.65 | 1.93e-9 +- 0.44e-9 |
-| `run_v013` | 1.13e10 (3 eV/ps) | 24.52 +- 2.76 | 2.17e-9 +- 0.24e-9 |
+`in.pattern.v16.template`: regional-NVT anneal (65 ps) -> 300 K equilibration ->
+80 ps flux warm-up (not measured) -> measured production. One input, one run.
 
-The scan therefore runs at 3 eV/ps, where the signal-to-noise ratio per wall-clock
-hour is roughly twice as good.
+| Gate | Requirement | v1.6 result |
+|---|---|---|
+| temperature stability | <= 25 K | **+0.87 / +0.99 K** |
+| energy conservation | <= 1% | 1.8e-7 |
+| flux symmetry | <= 5% | 1.5e-5 |
+| time convergence | <= 5% | 12.6% (flat, 1.7 sigma; 1.6 ns runs in progress) |
+| R^2 | >= 0.995 | structurally unreachable (R4) |
 
-**Hardware note (WSL2).** Concurrent MPI ranks on this machine must stay below
-**48**; at 56-64 ranks the per-rank throughput collapses from ~128 to 3-7
-steps/s with no error message (see `AGENT_MANUAL_V5_WSL.txt` section 14.2).
-Batch scans therefore use 4 jobs x 12 ranks with disjoint `--cpu-set` values
-(`tools/scan_parallel.py`), which reaches 251 steps/s aggregate.
+### 8.3 Three estimators disagree - and that is the important result
+
+| method | flat, 150 ps |
+|---|---|
+| `tools/postprocess.py` (16 A window extrapolation) | 5.33e-9 |
+| `tools/tbr_global_fit.py` (whole-profile piecewise fit) | 1.38e-8 |
+| `tools/tbr_plane.py` (temperature between two fixed planes, no interface model) | 1.36e-8 |
+
+The last two agree, so the window extrapolation is **2.6x low**: the Au layer is
+not linear (gradient -1.2 K/A within 8 A of an interface, -0.15 K/A in the
+middle) because Ti dissolves into the Au film and smears the interface over
+~10 A. Every TBR previously reported in this repository carries that bias.
+
+The plane estimator is also the strongest linear-response test available:
+
+| point | flux | TBR_eff (m^2 K / W) |
+|---|---|---|
+| flat | 1 eV/ps | 1.3567e-8 |
+| flat | 3 eV/ps | 1.3569e-8 |
+
+### 8.4 No pattern beats the flat reference
+
+With the equilibrated protocol, the patterned P350 point is 1.5-6.2 % **above**
+flat, and the earlier 60 ps screening result (0.60x, i.e. "P350 is best") does
+not survive. For this model the grooves do not lower the interface resistance;
+the dominant resistance is the ~10 A interdiffused region, which the pattern
+does not control.
+
+### 8.5 Hardware note (WSL2)
+
+Concurrent MPI ranks on this machine must stay below **48**; at 56-64 ranks the
+per-rank throughput collapses from ~128 to 3-7 steps/s with no error message
+(`AGENT_MANUAL_V5_WSL.txt` section 14.2). Batch scans use 4 jobs x 12 ranks with
+disjoint `--cpu-set` values (`tools/scan_parallel.py`).
 
 ## License
 
