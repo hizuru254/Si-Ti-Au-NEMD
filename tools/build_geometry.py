@@ -178,8 +178,9 @@ def build(spec: dict) -> tuple[np.ndarray, np.ndarray, dict]:
     ti_l = ti_block(-z_si_ti, -z_au)
     ti_r = ti_block(z_au, z_si_ti)
     if spec["sided"] == "double":
+        # bottom Ti layer: etch towards -z, so keep atoms at z <= -z_au - D
         d = groove_depth(ti_l[:, 0], ti_l[:, 1], spec)
-        ti_l = ti_l[ti_l[:, 2] >= -z_au - d + 1e-6]
+        ti_l = ti_l[ti_l[:, 2] <= -z_au - d + 1e-6]
     d = groove_depth(ti_r[:, 0], ti_r[:, 1], spec)
     ti_r = ti_r[ti_r[:, 2] >= z_au + d - 1e-6]
     ti_l = ti_l[remove_close(ti_l, si_l, 1.9)]
@@ -261,8 +262,13 @@ def make_geom(spec: dict, meta: dict) -> dict:
              "right": {"z_min": z_st + 2.0,  "z_max": z_st + 18.0, "material": "Si"}},
         ],
         "groups": {
-            "hot":  {"z_min": -z_out, "z_max": -z_out + 8.0},
-            "cold": {"z_min": z_out - 8.0, "z_max": z_out},
+            # reservoir inset: keep the thermostat away from the free surface,
+            # otherwise the surface relaxation transient (hundreds of K) dominates
+            # the imposed flux and the profile is not linear (protocol v1.2).
+            "hot":  {"z_min": -z_out + spec["res_inset"],
+                     "z_max": -z_out + spec["res_inset"] + 8.0},
+            "cold": {"z_min": z_out - spec["res_inset"] - 8.0,
+                     "z_max": z_out - spec["res_inset"]},
         },
         "chunk_bin_A": spec["bin"],
     }
@@ -301,6 +307,8 @@ def main() -> int:
     ap.add_argument("--phi", type=float, default=0.0)
     ap.add_argument("--sided", default="single", choices=["single", "double"])
     ap.add_argument("--bin", type=float, default=2.0)
+    ap.add_argument("--res-inset", type=float, default=0.0,
+                    help="A: hot/cold reservoirs inset from the free surfaces (protocol v1.2)")
     ap.add_argument("--status", default="DRAFT", choices=["DRAFT", "APPROVED"])
     ap.add_argument("--out-structure", required=True)
     ap.add_argument("--out-geom", required=True)
@@ -319,6 +327,7 @@ def main() -> int:
         "phi": args.phi,
         "sided": args.sided,
         "bin": args.bin,
+        "res_inset": args.res_inset,
         "status": args.status,
         "note": (f"{args.scan_id}: Si(001)/Ti(hcp)/Au/Ti/Si, scheme B "
                  f"(etch Ti, fill Au); t(Au)={args.t_nm} nm, Ti={args.ti} A, "
@@ -344,7 +353,8 @@ def main() -> int:
                                 allow_draft=True, bin_a=spec["bin"])
     print(f"[GEOM] {out_s}  atoms={len(atoms)}  Si={int((types==1).sum())} "
           f"Ti={int((types==2).sum())} Au={int((types==3).sum())}")
-    print(f"[GEOM] {out_g}  status={geom['status']}  bin={spec['bin']}")
+    print(f"[GEOM] {out_g}  status={geom['status']}  bin={spec['bin']} "
+          f"res_inset={spec['res_inset']} A  hot={geom['groups']['hot']} cold={geom['groups']['cold']}")
     if rep["errors"]:
         for e in rep["errors"]:
             print("  -", e)

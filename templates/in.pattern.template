@@ -42,13 +42,15 @@ run __N_EQUIL__
 unfix eq
 
 # --- NEMD 生产段：时间清零，便于后处理对齐 ------------------------------------
+# 协议 v1.2：heat 的 N 参数=1（每步注入）；eflux 仍是 params.flux (eV/ps)，
+# 平均通量不变。旧写法把组原子数放进 N，等于每 1728 步注入 1.728 eV 的脉冲。
 reset_timestep 0
 
 compute Tprof all chunk/atom bin/1d z lower __BIN__ units box
 fix prof all ave/chunk __AVE_NEVERY__ __AVE_NREPEAT__ __AVE_NFREQ__ Tprof temp file profile.txt
 
-fix hot  hot_g  heat ${hot_n}  __FLUX__
-fix cold cold_g heat ${cold_n} -__FLUX__
+fix hot  hot_g  heat 1  __FLUX__
+fix cold cold_g heat 1 -__FLUX__
 fix prod all nve
 
 thermo_style custom step temp pe ke etotal f_hot f_cold

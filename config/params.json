@@ -2,15 +2,19 @@
   "schema_version": "1.0.0",
   "project_root": "..",
   "lammps": {
-    "exe": "D:/LAMMPS/LAMMPS 64-bit 4Jul2026-MSMPI/bin/lmp.exe",
-    "mpiexec": "D:/LAMMPS/Bin/mpiexec.exe",
-    "version_marker": "LAMMPS (4 Jul 2026",
+    "exe": "/usr/bin/lmp",
+    "mpiexec": "/usr/bin/mpirun",
+    "version_marker": "LAMMPS (29 Sep 2021",
     "launch_mode": "serial",
     "mpi_ranks": 16,
     "omp_threads": 1
   },
-  "seeds": [1001, 2002, 3003],
-  "potentials_dir": "D:/LAMMPS/Tersoff",
+  "seeds": [
+    1001,
+    2002,
+    3003
+  ],
+  "potentials_dir": "/home/cc/si_nemd/potentials",
   "run": {
     "timestep_ps": 0.001,
     "n_equil_steps": 20000,
@@ -33,7 +37,7 @@
     "fit_r2_min": 0.995,
     "fit_min_points": 4,
     "fit_window_min_A": 6.0,
-    "tbr_relstd_max": 0.10,
+    "tbr_relstd_max": 0.1,
     "time_convergence_max_rel": 0.05,
     "tbr_min_m2KW": 1e-11,
     "tbr_max_m2KW": 1e-07,

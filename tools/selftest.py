@@ -75,7 +75,7 @@ def main() -> int:
     write_cu_data(work / "structure.data")
     (work / "potentials.in").write_text(
         'pair_style eam\n'
-        'pair_coeff * * "D:/LAMMPS/LAMMPS 64-bit 4Jul2026-MSMPI/Potentials/Cu_u3.eam"\n',
+        'pair_coeff * * "/usr/share/lammps/potentials/Cu_u3.eam"\n',
         encoding="utf-8")
     (work / "config").mkdir(parents=True, exist_ok=True)
     geomlib.dump_json(work / "config" / "potentials.lock.json", {

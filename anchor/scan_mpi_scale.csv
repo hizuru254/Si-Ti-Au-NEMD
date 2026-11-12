@@ -1,0 +1,5 @@
+scan_id,kind,W_nm,D_nm,P_nm,t_nm,phi_deg,sided,status,note
+MPIS01,flat,0,0,0,4.0,0,single,pending,mpi scaling 1 ranks 5k steps
+MPIS08,flat,0,0,0,4.0,0,single,pending,mpi scaling 8 ranks 5k steps
+MPIS16,flat,0,0,0,4.0,0,single,pending,mpi scaling 16 ranks 5k steps
+MPIS32,flat,0,0,0,4.0,0,single,pending,mpi scaling 32 ranks 5k steps

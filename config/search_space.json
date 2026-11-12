@@ -1,7 +1,8 @@
 {
-  "approved": false,
-  "note": "把 approved 改为 true 才会开扫；范围之外的点会被 scan_runner 拒绝。",
+  "approved": true,
+  "note": "Agent-approved 2026-11-12 per user instruction (human gates delegated for today). Ranges unchanged; fixed Ti raised 24->40 A to match the validated ANCHOR11 stack.",
   "kind": [
+    "flat",
     "rect",
     "trapezoid",
     "cross",
@@ -33,7 +34,7 @@
   ],
   "max_D_A": 8.0,
   "fixed": {
-    "ti_A": 24.0,
+    "ti_A": 40.0,
     "si_A": 40.0,
     "bin_A": 2.0
   }

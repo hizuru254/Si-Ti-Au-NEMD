@@ -1,0 +1,2 @@
+scan_id,kind,W_nm,D_nm,P_nm,t_nm,phi_deg,sided,status,note
+MPITEST,flat,0,0,0,4.0,0,single,pending,mpi smoke test

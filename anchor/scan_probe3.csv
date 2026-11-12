@@ -1,0 +1,2 @@
+scan_id,kind,W_nm,D_nm,P_nm,t_nm,phi_deg,sided,status,note
+PROBEG,flat,0,0,0,4.0,0,single,pending,protocol v1.3 regional NVT equilibration

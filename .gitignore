@@ -9,3 +9,14 @@ validation/workspace/*/*/screen.err.txt
 _test/
 config/.runner_*
 optimization/
+
+# legacy loose copies left in the repo root from the Windows transfer
+/_pre_import_backup_*/
+/Si.tersoff
+/Au_u3.eam
+/Ti.meam.spline
+/in.*
+/init_*.lammpstrj
+/log.*
+/profile_*.txt
+/profile_plot.png

@@ -1,10 +1,10 @@
 ================================================================================
 文件名称: AGENT_MANUAL_V5_WSL.txt
-版本    : 5.1-wsl（未验证版）
+版本    : 5.3-wsl（已在 WSL2/96 核实测，见第十四节）
 生效日期: 2026-11-10
 适用机器: 另一台机器（Windows 11 + WSL2 Ubuntu 22.04 + LAMMPS 29Sep2021
           + AMD EPYC 9684X 96 核 + 576 GB RAM + RTX 4090）
-文件性质: 该机器的执行依据；结构与判据完全沿用 V5-WIN
+文件性质: 该机器的执行依据；结构与判据沿用 V5-WIN，环境项已实测修正
 配套文档: AGENT_MANUAL_V5_WIN.txt（本机已验证版，权威结构）
 ================================================================================
 
@@ -402,5 +402,86 @@
     - 全部命令标记 [未验证]，附首次上机检查清单
 
 ================================================================================
-文档结束。目标机第一次使用前，先读第 0 节与第九节。
+【十四、本机实测结论（2026-11-12，WSL2 + 96 核）】
+
+  以下每条都在本机跑过，不再是 [未验证]。
+
+  14.1 环境实测
+    - Ubuntu 22.04.5 LTS，kernel 6.18.58.1-microsoft-standard-WSL2
+    - lmp = /usr/bin/lmp，版本 "29 Sep 2021 - Update 2"
+      已装包：MANYBODY MEAM EXTRA-PAIR MOLECULE KSPACE MPIIO PYTHON 等
+    - MPI = Open MPI 4.1.2，mpiexec -n 4 hostname 正常
+    - Python 3.10.12 + numpy 1.21.5
+    - tools/selftest.py PASS（需把 Cu 势路径改成
+      /usr/share/lammps/potentials/Cu_u3.eam，仓库原值指向 Windows）
+
+  14.2 并发上限（**最重要的一条，违反会慢 40 倍**）
+    在 45880 原子体系上实测（每 job 用 --cpu-set 绑定互不重叠的核）：
+
+      总 rank 数   单 job 吞吐      结论
+      ----------   -------------   ------------------------------
+      16 x 1       70.6 steps/s    正常
+      24 x 1       105.7 steps/s   正常
+      32 x 1       118-148 steps/s 正常，单 job 最优点在 40 ranks (141)
+      48 x 1       127.7 steps/s   正常
+      56 x 1       7.0 steps/s     **崩塌**
+      64 x 1       3.5 steps/s     **崩塌**
+
+      2 job x 16   82.8 each      正常（合计 165）
+      2 job x 24   105.7 each     正常（合计 202）
+      3 job x 16   70.3 each      正常（合计 210）
+      4 job x 12   65.6 each      正常（合计 251，吞吐最高）
+      2 job x 32   4.6 each       **崩塌**（合计 64 ranks）
+
+    结论：**同机并发 MPI rank 总数不得超过 48**。超过 48（56/64 已经触发）
+    时每个 rank 的吞吐掉到 3-7 steps/s，看起来像"机器坏了"，实际上是
+    WSL2 的 vCPU/共享内存调度边界，不是 LAMMPS 或势函数的问题。
+    推荐配置：单点算 → 1 job x 40~48 ranks；批量扫描 → 4 job x 12 ranks
+    （合计 251 steps/s，是单 job 的 ~1.8 倍）。
+
+    多个 job 并行时**必须**用 MPIRUN_EXTRA 指定互不重叠的 CPU 集合：
+      MPIRUN_EXTRA="--cpu-set 0-11"  bash tools/run_seed.sh <run> <seed>
+      MPIRUN_EXTRA="--cpu-set 12-23" bash tools/run_seed.sh <run2> <seed>
+    （run_seed.sh 已支持 MPIRUN_EXTRA；OpenMPI 4.1 的 --cpu-set 生效，
+    实测 96 个 lmp 进程落在 96 个不同核上。）
+
+  14.3 LAMMPS 29Sep2021 命令行差异
+    - **没有 -nonbuf**（4Jul2026 有）。加了会直接
+      "ERROR: Invalid command-line argument" 并以 exit=1 结束，
+      看起来像势函数/输入错误。run_seed.sh 已移除该参数。
+    - 没有 $(zmid) 这类内置变量；求中面请用
+      variable zmid equal 0.5*(zlo+zhi)
+    - Read_data 的行数、log 缓冲：移除 -nonbuf 后 screen/log 是 4 KB 块缓冲，
+      监控进度不要看 screen.txt 的最后一行（可能滞后数千步），
+      看 log.pattern 大小或等 run_seed 结束。
+
+  14.4 势函数与哈希
+    本机 /usr/share/lammps/potentials/ 与 /home/cc/lammps/potentials/ 下的
+    Si.tersoff、Au_u3.eam、Ti.meam.spline 与 Windows 机器**逐字节相同**：
+      Si.tersoff  5b55dc7be1569193f468b9f56128a36e67feedd8e145561f61aec4b49a33d723
+      Au_u3.eam   f34555e13ff7abdaf7350515759d0e3f353a3ad7003208052e3d6045311d42be
+      Ti.meam.spline 3a5d6e520e7ae134e0a057d0ddc2fec8ec9e23f767fbbb0cd5ecd99e43510731
+    因此 anchor/potentials.lock.json 只需重算 potentials.in 的哈希（路径改了）。
+
+  14.5 协议 v1.3（物理/数值修正，见 docs/PROTOCOL_V13.md）
+    - fix heat 的 N 参数必须是 1（每步注入）。旧模板把组原子数 1728 放进
+      N 的位置，等于每 1.728 ps 注入 1.728 eV 的脉冲；平均通量虽对，
+      但通量对称性只有 2.3%，改成 1 之后实测 0.0000。
+    - 热源/冷源必须从自由表面内移 8 A（build_geometry.py --res-inset 8）。
+      自由表面在 NVT 平衡时会被加热到 600-750 K，远大于 1 eV/ps 的注入量。
+    - 平衡段必须用**两半各自 NVT**（template v1.3）。全局 NVT 只约束总动能，
+      无法消除两半之间几十 K 的温度差。
+    - R^2>=0.995 在这套体系 + 1 eV/ps 下**数学上不可达**：
+      16 A 窗口内的体相温降只有 ~0.2 K，而 2 A bin 的 1 ps 块噪声 ~11 K、
+      100 ps 平均后仍有 ~1.2 K。改用 tools/tbr_uncertainty.py 报
+      TBR +- sigma（块平均），并要求每个界面 dT/sigma 可核查。
+
+  14.6 运行时间参考（45880 原子）
+    - 200k 步 @ 24 ranks = 1238 s（约 161 steps/s wall 等效）
+    - 150k 步 @ 24 ranks 双 job 并行 = 1239 s
+    - 完整锚点 3 seed x (40k+120k) @ 16 ranks 串行约 1.3 h；
+      3 个 seed 并行（3x16=48 ranks）约 30 min
+================================================================================
+文档结束。
+目标机第一次使用前，先读第 0 节与第九节。
 ================================================================================
