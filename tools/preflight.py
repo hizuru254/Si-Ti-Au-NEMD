@@ -232,6 +232,11 @@ def main() -> int:
                 "__AVE_NREPEAT__": str(int(run_cfg["ave_nrepeat"])),
                 "__AVE_NFREQ__": str(int(run_cfg["ave_nfreq"])),
                 "__FLUX__": f"{float(params['flux_ev_per_ps']):.10g}",
+                "__N_WARM__": str(int(run_cfg["n_warm_steps"])),
+                "__T_ANN__": f"{float(run_cfg['t_anneal']):.1f}",
+                "__N_ANN_UP__": str(int(run_cfg["n_ann_up"])),
+                "__N_ANN_HOLD__": str(int(run_cfg["n_ann_hold"])),
+                "__N_ANN_DOWN__": str(int(run_cfg["n_ann_down"])),
             }
             rendered = new_run.render(template.read_text(encoding="utf-8"), values, "dryrun")
             (seed_dir / "in.pattern").write_text(rendered, encoding="utf-8", newline="\n")

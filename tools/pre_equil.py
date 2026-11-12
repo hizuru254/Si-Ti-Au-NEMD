@@ -35,6 +35,11 @@ def main() -> int:
     ap.add_argument("--dt", type=float, default=0.001)
     ap.add_argument("--run", action="store_true", help="actually launch LAMMPS")
     ap.add_argument("--mpi", type=int, default=0, help="mpirun -np N (0 = serial)")
+    ap.add_argument("--anneal-temp", type=float, default=0.0,
+                    help="if >0: ramp 300 -> T -> 300 before the 300 K hold")
+    ap.add_argument("--anneal-up", type=int, default=20000)
+    ap.add_argument("--anneal-hold", type=int, default=30000)
+    ap.add_argument("--anneal-down", type=int, default=30000)
     args = ap.parse_args()
 
     geom = geomlib.load_json(Path(args.geom))
@@ -73,6 +78,26 @@ def main() -> int:
         "thermo_modify flush yes",
     ]
     done = 0
+    if args.anneal_temp > 0:
+        ta = args.anneal_temp
+        stages = [("ramp-up", 300.0, ta, args.anneal_up),
+                  ("hold", ta, ta, args.anneal_hold),
+                  ("ramp-down", ta, 300.0, args.anneal_down)]
+        for name, t0, t1, n in stages:
+            lines.append(f'print "ANNEAL {name} {t0}->{t1} steps={n}"')
+            lines.append(f"unfix eqL")
+            lines.append(f"unfix eqR")
+            lines.append(f"fix eqL halfL_g nvt temp {t0} {t1} 0.1")
+            lines.append(f"fix eqR halfR_g nvt temp {t0} {t1} 0.1")
+            lines.append(f"run {n}")
+            done += n
+            lines.append(f'print "PREEQ_CHECKPOINT step={done} stage={name}"')
+            lines.append(f"write_data {out}/preeq_{done:07d}.data")
+        lines.append(f"print \"ANNEAL done, settle at 300 K\"")
+        lines.append("unfix eqL")
+        lines.append("unfix eqR")
+        lines.append("fix eqL halfL_g nvt temp 300.0 300.0 0.1")
+        lines.append("fix eqR halfR_g nvt temp 300.0 300.0 0.1")
     for i, n in enumerate(chunks, 1):
         lines.append(f"run {n}")
         done += n
