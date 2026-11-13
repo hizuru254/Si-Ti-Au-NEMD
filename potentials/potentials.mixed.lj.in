@@ -1,0 +1,19 @@
+# ============================================================================
+# potentials.mixed.lj.in  -- hybrid Tersoff(Si) + EAM(Au) + LJ(Ti and crosses)
+#
+# Si-Si  : Tersoff   Si.tersoff            (Tersoff, PRB 39, 5566 (1989))
+# Au-Au  : EAM       Au_u3.eam             (Foiles, Baskes, Daw, PRB 33, 7983 (1986))
+# Ti-Ti  : LJ        sigma 2.93 A / eps 0.0250 eV
+# Cross  : LJ        Lorentz-Berthelot mixing of the single-element LJ sets
+#
+# Single-element LJ: Si 3.83 A / 0.01743 eV (1.682 kJ/mol, ACS Macro Lett. table),
+# Ti 2.93 A / 0.0250 eV, Au 2.57 A / 0.0390 eV.
+# The previous file used eps 0.20-0.30 eV with sigma 2.00 A for all crosses.
+# ============================================================================
+pair_style hybrid tersoff eam lj/cut 10.0
+pair_coeff * * tersoff "/home/cc/si_nemd/potentials/Si.tersoff" Si NULL NULL
+pair_coeff 3 3 eam "/home/cc/si_nemd/potentials/Au_u3.eam"
+pair_coeff 1 2 lj/cut 0.02087 3.380
+pair_coeff 1 3 lj/cut 0.02607 3.200
+pair_coeff 2 2 lj/cut 0.02500 2.930
+pair_coeff 2 3 lj/cut 0.03122 2.750
