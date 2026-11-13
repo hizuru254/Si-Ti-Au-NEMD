@@ -81,3 +81,19 @@ python3 tools/tbr_plane.py  --run-dir <run> --seed seed_1001
 python3 tools/tbr_global_fit.py --run-dir <run> --seed seed_1001
 python3 tools/rank_plane.py --workspace anchor/workspace --proto 1.6
 ```
+
+## 3c. NEP 可达性探针（2026-11-13）
+
+| URL | HTTP |
+|---|---|
+| raw.githubusercontent.com/brucefan1983/NEP_CPU/main/README.md | **200** |
+| raw.githubusercontent.com/brucefan1983/GPUMD/master/README.md | **200** |
+| materialsmodeling.org/nep89/nep89.txt | 404 |
+| github.com/nep-model/NEP89/.../nep89.txt | 404 |
+
+结论：**NEP_CPU 源码可获取**（可编译成 LAMMPS pair style），但 **NEP 模型文件
+（nep.txt）没有公开直链**——NEP89 需要到 materialsmodeling.org 申请/下载，
+Si-Ti 专用模型需按 arXiv:2511.16646 的训练库（Zenodo）自训。
+
+因此下一轮的第一步是：**取得一个含 Si/Ti/Au 的 nep.txt**（用户下载或提供镜像），
+之后 clone NEP_CPU → 按其中 LAMMPS 接口编译 → 用新势重标晶格 → 重跑锚点。
