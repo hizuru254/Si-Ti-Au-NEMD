@@ -26,6 +26,14 @@ NX = NY = 4
 NZ = 12
 
 
+def _cu_eam() -> str:
+    for c in ("/usr/share/lammps/potentials/Cu_u3.eam",
+              "/home/cc/lammps/potentials/Cu_u3.eam"):
+        if Path(c).exists():
+            return c
+    raise SystemExit("Cu_u3.eam not found; edit _cu_eam() in tools/selftest.py")
+
+
 def write_cu_data(path: Path) -> None:
     basis = [(0, 0, 0), (0.5, 0.5, 0), (0.5, 0, 0.5), (0, 0.5, 0.5)]
     atoms = []
@@ -75,7 +83,7 @@ def main() -> int:
     write_cu_data(work / "structure.data")
     (work / "potentials.in").write_text(
         'pair_style eam\n'
-        'pair_coeff * * "/usr/share/lammps/potentials/Cu_u3.eam"\n',
+        'pair_coeff * * "' + _cu_eam() + '"\n',
         encoding="utf-8")
     (work / "config").mkdir(parents=True, exist_ok=True)
     geomlib.dump_json(work / "config" / "potentials.lock.json", {

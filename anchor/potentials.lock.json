@@ -1,10 +1,10 @@
 {
   "schema_version": "1.0",
   "status": "APPROVED",
-  "note": "Anchor potentials rehashed on new WSL2 machine 2026-11-12: paths remapped to /home/cc/si_nemd/potentials, same potential files.",
+  "note": "Anchor potentials, paths made repo-relative for portability (2026-11-13); hashes recomputed on this machine.",
   "files": {
     "potentials.in": {
-      "sha256": "adbe7d3d881f8d73e7dcdc6dd93bcbb39249d7f1e02d2b6bb005b44a002faa5e"
+      "sha256": "f51a59aae350d3faf23b6f9e694d353882c24715f0217cb8c4efbb96645668d2"
     },
     "Si.tersoff": {
       "sha256": "5b55dc7be1569193f468b9f56128a36e67feedd8e145561f61aec4b49a33d723"

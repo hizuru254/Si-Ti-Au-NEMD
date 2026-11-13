@@ -212,6 +212,12 @@ def main() -> int:
         try:
             shutil.copy2(structure, tmp / "structure.data")
             shutil.copy2(potentials, tmp / "potentials.in")
+            # the dry run lives at a different depth than a real seed dir,
+            # so repo-relative potential paths must be made absolute here
+            ptxt = (tmp / "potentials.in").read_text(encoding="utf-8")
+            ptxt = ptxt.replace("../../../../potentials/",
+                                str(root / "potentials") + "/")
+            (tmp / "potentials.in").write_text(ptxt, encoding="utf-8", newline="\n")
             seed_dir = tmp / "seed_1001"
             seed_dir.mkdir()
             run_cfg = params["run"]

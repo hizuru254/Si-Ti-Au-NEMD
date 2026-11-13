@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run_v038",
+  "scan": {
+    "scan_id": "V16F000",
+    "kind": "flat",
+    "W_nm": "0",
+    "D_nm": "0",
+    "P_nm": "0",
+    "t_nm": "4.0",
+    "phi_deg": "0",
+    "sided": "single",
+    "status": "pending",
+    "note": "v1.6 in-run anneal + warmup"
+  },
+  "per_seed": {
+    "seed_1001": {
+      "valid": false,
+      "tbr_total_m2KW": 7.175622125901492e-09,
+      "dT_total_K": 27.077452508960278,
+      "checks": {
+        "parse_ok": true,
+        "exit_zero": true,
+        "log_complete": true,
+        "no_lost_atoms": true,
+        "minimize_converged": true,
+        "net_flux_zero": true,
+        "flux_symmetry": true,
+        "toteng_drift": true,
+        "dT_signal": true,
+        "fit_quality": false,
+        "tbr_in_range": true,
+        "time_converged": false,
+        "temp_stable": true,
+        "log_unmodified": true
+      }
+    }
+  },
+  "group_checks": {
+    "manifest_ok": true,
+    "all_seeds_valid": false,
+    "n_valid_ge_3": false,
+    "relstd_ok": false,
+    "geom_approved": true
+  },
+  "n_valid": 0,
+  "n_seeds": 1,
+  "TBR_mean_m2KW": null,
+  "TBR_std_m2KW": null,
+  "TBR_relstd": null,
+  "is_passed": false,
+  "note": "all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged",
+  "checked_at": "2026-11-12T21:56:01+08:00"
+}

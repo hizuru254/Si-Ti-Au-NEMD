@@ -11,8 +11,8 @@
 # The previous file used eps 0.20-0.30 eV with sigma 2.00 A for all crosses.
 # ============================================================================
 pair_style hybrid tersoff eam lj/cut 10.0
-pair_coeff * * tersoff "/home/cc/si_nemd/potentials/Si.tersoff" Si NULL NULL
-pair_coeff 3 3 eam "/home/cc/si_nemd/potentials/Au_u3.eam"
+pair_coeff * * tersoff "../../../../potentials/Si.tersoff" Si NULL NULL
+pair_coeff 3 3 eam "../../../../potentials/Au_u3.eam"
 pair_coeff 1 2 lj/cut 0.02087 3.380
 pair_coeff 1 3 lj/cut 0.02607 3.200
 pair_coeff 2 2 lj/cut 0.02500 2.930
