@@ -1,0 +1,123 @@
+================================================================================
+文件名称: AGENT_MANUAL_V6_WSL.txt
+版本    : 6.0-wsl（已在目标机逐条实测）
+生效日期: 2026-11-13
+适用机器: WSL2 Ubuntu 22.04.5 / AMD EPYC 9684X 96 核 / LAMMPS 29Sep2021 Update 2
+文件性质: 本机执行依据。取代 AGENT_MANUAL_V4/V5-WIN/V5-WSL（已删除，见 git 历史）
+================================================================================
+
+【0. 这份文件的地位】
+
+  旧版的 [未验证] 标记全部作废：下面每一条都在本机跑过并有日志/数据支撑。
+  证据文件：
+    docs/RESULTS_SUMMARY.md      结论汇总
+    docs/STATUS_20261112.md      16 节完整流水（含失败路径）
+    docs/PROTOCOL_V13.md        剖面不可信的四个根因（R1-R4）
+    docs/PROTOCOL_V14.md        预平衡与"热流/初态都不是主因"
+    docs/PROTOCOL_V16.md        现行协议（退火 + 通量热身）
+    docs/HANDOFF_STATE.md       断线续接用状态文件
+
+【一、环境（实测）】
+
+  OS        Ubuntu 22.04.5 LTS，kernel 6.18.58.1-microsoft-standard-WSL2
+  CPU       AMD EPYC 9684X 96-Core，96 线程/1 线程每核，1 NUMA
+  LAMMPS    /usr/bin/lmp，29 Sep 2021 - Update 2
+            已装包：MANYBODY MEAM EXTRA-PAIR MOLECULE KSPACE MPIIO PYTHON 等
+            **没有 -nonbuf**；**没有 $(zmid)**；没有 pair_style nep
+  MPI       Open MPI 4.1.2（mpiexec -n 4 hostname 正常）
+  Python    3.10.12 + numpy 1.21.5
+  势函数    /usr/share/lammps/potentials 与仓库 potentials/ 内容一致：
+            Si.tersoff  Au_u3.eam  Ti.meam.spline（与 Windows 原件逐字节相同）
+
+【二、并发上限（最重要的一条，违反慢 40 倍）】
+
+  45880 原子体系实测（每 job 用 --cpu-set 绑定互不重叠的核）：
+
+    总 rank 数    单 job 吞吐      结论
+    16            70.6 steps/s    正常
+    24            105.7           正常
+    32-48         118-128         正常，单 job 最优在 40 ranks
+    56            7.0             **崩塌**
+    64            3.5             **崩塌**
+
+    2 job x 24    105.7 each      正常
+    3 job x 16    70.3 each       正常（合计 210）
+    4 job x 12    65.6 each       正常（合计 251，吞吐最高）
+
+  **同机并发 MPI rank 总数不得超过 48。** 超过时无任何报错，只是变慢，
+  很容易误判成"机器坏了"或"势函数有问题"。
+
+  多 job 必须指定互不重叠的 CPU 集合：
+    MPIRUN_EXTRA="--cpu-set 0-11"  bash tools/run_seed.sh <run> <seed>
+    MPIRUN_EXTRA="--cpu-set 12-23" bash tools/run_seed.sh <run2> <seed>
+  （run_seed.sh 已支持 MPIRUN_EXTRA）
+
+【三、现行协议 v1.6（templates/in.pattern.template）】
+
+  一条输入完成六个阶段：
+    minimize
+    分区 NVT 退火 300 -> 700 K      __N_ANN_UP__   (15 ps)
+    700 K 保温                       __N_ANN_HOLD__ (25 ps)
+    700 -> 300 K 降温                __N_ANN_DOWN__ (25 ps)
+    300 K 平衡（两半各自 NVT）        __N_EQUIL__    (10 ps)
+    通量热身（fix heat，不计量）      __N_WARM__     (80 ps)
+    计量生产（reset_timestep 0 后）   __N_PROD__     (150 ps)
+
+  为什么必须这样（四条根因，详见 PROTOCOL_V13/V14/V16）：
+    R1  fix heat 的 N 语义是"每 N 步注入一次"，旧模板误填组原子数
+    R2  热源不能压在自由表面（平衡时表面 600-750 K）
+    R3  全局 NVT 消不掉内部温度梯度（两半会差几十 K）
+    R4  界面在 300 K 持续弛豫（放热 0.4-1.4 eV/ps，与热流同量级）
+    R6  通量刚加上的 0-100 ps 是瞬态，必须丢弃
+
+  参考参数：anchor/params.v16.json（锚点）、anchor/params.v16_scan.json（扫描）
+
+【四、测量与判据】
+
+  三种估计量并存，报告时必须一起给：
+    tools/postprocess.py      16 A 窗口外推（仓库原方法；**对本体系偏低 2.6 倍**）
+    tools/tbr_global_fit.py   全剖面分段线性拟合（1.38e-8）
+    tools/tbr_plane.py        固定平面温差，无界面假设（1.36e-8，**首选**）
+    tools/tbr_uncertainty.py  块平均误差棒
+
+  qc_check.py 的阈值一律不改。现状：
+    温度稳定 <=25 K        通过（实测 +0.9 K）
+    能量守恒 <=1%          通过（1.8e-7）
+    通量对称 <=5%          通过（1.5e-5）
+    时间收敛 <=5%          未达（12.6%，需 1.6 ns 级平均；界面持续演化）
+    R^2 >= 0.995           结构性不可达（窗内温降 0.2 K vs bin 噪声 1.2 K）
+
+【五、批量扫描】
+
+  python3 tools/scan_parallel.py --config anchor/params.v16_scan.json \
+    --scan-csv anchor/scan_v16_scan.csv --potentials anchor/potentials.in \
+    --space config/search_space.json --workers 4 --ranks 12
+  （自带 G0 -> 建版 -> 并行跑 -> 后处理 -> QC -> 排序）
+
+  排名：python3 tools/rank_plane.py --workspace anchor/workspace --proto 1.6
+
+【六、已验证的结论（可直接引用）】
+
+  1. 线性响应成立：flat 在 1 与 3 eV/ps 下 TBR_eff = 1.3567e-8 / 1.3569e-8（差 0.01%）
+  2. 图案不改变热阻：8 点全协议扫描 TBR_eff 1.347-1.411e-8，散布 4.7% < 噪声 5%
+  3. 原窗口外推法系统性偏低 2.6 倍（Au 层靠界面 8 A 内梯度 -1.2 K/A，
+     中间 20 A 仅 -0.15 K/A，层内无线性区）
+  4. LJ 交叉项无解：强（ε=0.3 eV/σ=2.0 A）则 50 ps 内互混放热 2206 eV；
+     弱（Lorentz-Berthelot 混合）则 Si 板膨胀 15 A 解体
+  5. 700 K 保温 150 ps 仍以 -2.8 eV/ps 弛豫 → 换温度也救不了
+
+【七、下一步（唯一能给出可信"最优图案"的路径）】
+
+  换真实多元素势：NEP。本机 cmake/g++/mpicxx 齐全，NEP_CPU 与 GPUMD 源码可下载
+  （HTTP 200），缺的只是含 Si/Ti/Au 的 nep.txt（NEP89 需申请；Si-Ti 专用需用
+  arXiv:2511.16646 的 Zenodo 训练库自训）。拿到后：编译 -> 重标晶格 -> 重跑锚点。
+
+【八、不要做的事】
+
+  - 不要并发超过 48 ranks
+  - 不要给 29Sep2021 加 -nonbuf
+  - 不要用 postprocess.py 的单一数值对外（偏低 2.6 倍）
+  - 不要为了"通过 QC"去调阈值
+  - 不要在 300 K 用 LJ 交叉项期待稳态 TBR
+================================================================================
+文档结束。

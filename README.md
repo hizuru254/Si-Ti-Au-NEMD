@@ -22,8 +22,12 @@ and a Gaussian-process/expected-improvement loop proposes the next design points
 report the current validation status rather than a physical result: the execution chain
 passes a Cu/EAM self-test; a 1,856-atom synthetic stack is rejected by the QC gates as
 an intentional negative control; a 36,072-atom Si(001)/Ti(hcp)/Au anchor is prepared,
-and a 3,000-step pilot is numerically stable (no lost atoms, energy drift 9×10⁻⁶,
-TBR ≈ 3.0×10⁻⁸ m²K/W), while the production 3 × 120,000-step anchor is still pending.
+and a 3,000-step pilot is numerically stable (no lost atoms, energy drift 9×10⁻⁶).
+On the WSL2/96-core machine the protocol was repaired (six defects, see section 8);
+with the repaired protocol the anchor reaches +0.9 K temperature drift and 1.8×10⁻⁷
+energy conservation, and TBR = 1.36×10⁻⁸ m²K/W (plane estimator, consistent with an
+independent whole-profile fit). The anchor still fails the R²≥0.995 gate, and section 8
+explains why that gate is unreachable for this stack.
 The model omits electronic thermal transport, uses LJ interactions for Ti and the
 Ti/Si/Au cross terms, and contains no silicide chemistry. Consequently, the workflow can
 rank design trends within a fixed model, but it cannot yet provide experimentally

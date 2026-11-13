@@ -1,5 +1,8 @@
 # 新电脑交接文档：Si/Ti/Au/Ti/Si NEMD（WSL2 + 96 核）
 
+> **[历史文档]** 这是 2026-11-12 迁移时的交接说明，其中的路径/工具名多数已被取代。
+> 当前状态请看 `docs/HANDOFF_STATE.md`，执行依据看 `AGENT_MANUAL_V6_WSL.txt`。
+>
 > 这份文档写给**新电脑上的 AI Agent**。它没有本项目的聊天历史，也没有旧工作文件。
 > 先完整读本文，再读仓库里的 `README.md`、`AGENT_MANUAL_V5_WSL.txt`、
 > `docs/AUTONOMOUS_LOOP.md`，然后按“阶段 0–2”执行；**不要直接开跑长任务**。
@@ -338,7 +341,7 @@ python3 tools/build_geometry.py \
 ## 8. 参考文件
 
 - `README.md`：项目结构、状态、命令；
-- `AGENT_MANUAL_V5_WSL.txt`：WSL 差异与未验证项；
+- `AGENT_MANUAL_V6_WSL.txt`：本机实测的操作手册（取代 V5）；
 - `docs/AUTONOMOUS_LOOP.md`：H0/H1a/H6 门禁与搜索设计；
 - `anchor/params.anchor11.json`：v1.1 参数（3 seeds，40k+120k，bin2）；
 - `anchor/potentials.in`：Si Tersoff / Au EAM / Ti 与界面 LJ；
