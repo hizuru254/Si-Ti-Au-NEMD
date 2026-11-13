@@ -45,6 +45,24 @@
 4. 更新 `potentials.lock.json` 哈希 + preflight 重跑。
 5. 重新生成 patch/bundle，复制到 `F:\LJ KE\si_nemd`，推 GitHub（需凭据）。
 
+## 3b. 机器学习势可行性判定（2026-11-13，本轮新增）
+
+| 项 | 结果 |
+|---|---|
+| 构建工具 | cmake / g++ / mpicxx / make 都在 ✓ |
+| LAMMPS 源码 | `/home/cc/lammps/src`，含 ML-IAP、ML-PACE、ML-POD、ML-SNAP、ML-RANN、ML-QUIP、ML-HDNNP |
+| 已装 lmp 的 ML 支持 | **无**（编译时没开任何 ML 包） |
+| `pair_style nep` | **stock LAMMPS 没有**（NEP 属 GPUMD，需打补丁或改用 GPUMD 本体） |
+| 最可能的真实势 | **NEP89**（89 元素通用 NEP，覆盖 Si/Ti/Au，材料建模社区已发布）；Si-Ti 专用 NEP 见 arXiv:2511.16646（训练库在 Zenodo） |
+
+**结论**：机器具备编译能力，但迁移到 NEP 需要：
+1. 取 NEP89 模型文件（或按 arXiv:2511.16646 的训练库自训）；
+2. 编译带 NEP 的 LAMMPS（NEP_CPU 补丁）或用 GPUMD 本体跑 NEMD；
+3. 用 NEP 重算 `build_geometry` 的晶格常数（NEP 的 Si/Ti 平衡体积与 Tersoff/EAM 不同）。
+
+这是**下一步的主线**，预计 2–4 h（编译 30 min + 验证 1 h + 重跑锚点 1.5 h）。
+本轮因上下文预算未执行，代码与数据状态已完整落盘。
+
 ## 4. 未解决 / 需人类决定
 
 - **R²≥0.995**：结构性不可达（窗内温降 0.2 K vs bin 噪声 1.2 K），需批准改判据。
