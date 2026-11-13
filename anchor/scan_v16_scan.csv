@@ -7,3 +7,6 @@ S16W240,rect,2.4,0.6,3.0,4.0,0,single,failed,W max (thin Ti wall)
 S16D040,rect,1.6,0.4,3.0,4.0,0,single,failed,D shallow
 S16D080,rect,1.6,0.8,3.0,4.0,0,single,failed,D deep
 S16P350,rect,1.2,0.6,3.5,4.0,0,single,failed,P350 (best in v1.3 screen)
+scan_id,kind,W_nm,D_nm,P_nm,t_nm,phi_deg,sided,status,note
+PAIR_TIAU,pair,0,0,0,0,0,single,pending,two-layer Ti/Au single interface
+PAIR_TIAU3,pair,0,0,0,0,0,single,pending,two-layer Ti/Au flux 3

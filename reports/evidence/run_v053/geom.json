@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0",
+  "status": "APPROVED",
+  "geometry_id": "PAIR_ti_au_t60",
+  "note": "two-layer single-interface cell ti/au, 60.0 A each side",
+  "box": {
+    "lx": 65.16,
+    "ly": 65.16,
+    "z_min": -75.0,
+    "z_max": 75.0,
+    "boundary": "p p p"
+  },
+  "layers": [
+    {
+      "id": "TI_L",
+      "material": "Ti",
+      "z_min": -60.0,
+      "z_max": 0.0
+    },
+    {
+      "id": "AU_R",
+      "material": "Au",
+      "z_min": 0.0,
+      "z_max": 60.0
+    }
+  ],
+  "interfaces": [
+    {
+      "id": "TI_AU",
+      "z": 0.0,
+      "left": {
+        "z_min": -16.0,
+        "z_max": -2.0,
+        "material": "Ti"
+      },
+      "right": {
+        "z_min": 2.0,
+        "z_max": 16.0,
+        "material": "Au"
+      }
+    }
+  ],
+  "groups": {
+    "hot": {
+      "z_min": -56.2,
+      "z_max": -50.0
+    },
+    "cold": {
+      "z_min": 50.0,
+      "z_max": 56.0
+    }
+  },
+  "chunk_bin_A": 2.0,
+  "expected_atoms": {
+    "total": 29720
+  }
+}

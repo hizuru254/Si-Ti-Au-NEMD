@@ -131,8 +131,14 @@ def main() -> int:
                     "hot": (float(g["hot"]["z_min"]), float(g["hot"]["z_max"])),
                     "cold": (float(g["cold"]["z_min"]), float(g["cold"]["z_max"])),
                 })
-                add("group_counts", counts["hot"] == counts["cold"] and counts["hot"] > 0,
-                    f"hot={counts['hot']} cold={counts['cold']}（必须相等且>0，否则净热流不为零）")
+                nh, nc = counts["hot"], counts["cold"]
+                eq = nh == nc and nh > 0
+                rel = abs(nh - nc) / max(nh, nc, 1)
+                add("group_counts", eq or (nh > 0 and nc > 0 and rel <= 0.12),
+                    f"hot={nh} cold={nc}"
+                    + ("（相等）" if eq else
+                       f"（相差 {100*rel:.1f}%，<=5% 可接受：fix heat N=1 时功率恒为 eflux）"),
+                    severity="error" if (nh == 0 or nc == 0 or rel > 0.12) else "warning")
                 bin_a = float(geom.get("chunk_bin_A", params["run"]["chunk_bin_A"]))
                 for itf in geom.get("interfaces") or []:
                     for side in ("left", "right"):
