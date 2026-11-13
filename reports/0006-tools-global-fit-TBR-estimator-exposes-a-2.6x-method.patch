@@ -1,0 +1,272 @@
+From f9c5be7c4cc8fb479fb3a21deb749247fc93f225 Mon Sep 17 00:00:00 2001
+From: hizuru254 <2654837056@qq.com>
+Date: Thu, 12 Nov 2026 22:41:18 +0800
+Subject: [06/14] tools: global-fit TBR estimator exposes a 2.6x method
+ systematic
+
+Adds tools/tbr_global_fit.py, which fits the whole temperature profile with a
+piecewise-linear model (1 reference + 5 slopes + 4 interface jumps) instead of
+fitting each 16 A window independently.
+
+On run_v038 (flat, v1.6):
+  window extrapolation (postprocess.py) : 5.33e-9 m2K/W
+  global fit                            : 1.38e-8 m2K/W
+The fit itself is sound (residual rms 1.1 K over 91 bins), so the discrepancy is
+physical: the Au layer is NOT linear. Its gradient is -1.2 K/A within 8 A of
+each interface and only -0.15 K/A in the middle 20 A, because Ti has dissolved
+into the Au film and smeared the interface over ~10 A.
+
+Shifting the assumed interface planes by +-3 A changes the global-fit total by
+only +-7.6 % (1.384-1.489e-8), so the curvature inside the layers, not the plane
+placement, is the dominant systematic.
+
+Consequence: TBR_total of this stack is only defined to about a factor 2.6, far
+above the 4-8 % statistical error reached by v1.6. Pattern differences below
+~20 % cannot be resolved by running longer; the limitation is the model.
+A 'method consistency' gate (window vs global fit within 20 %) is proposed but
+NOT enabled, since changing QC criteria needs human approval.
+---
+ docs/STATUS_20261112.md |  39 +++++++++
+ tools/tbr_global_fit.py | 183 ++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 222 insertions(+)
+ create mode 100644 tools/tbr_global_fit.py
+
+diff --git a/docs/STATUS_20261112.md b/docs/STATUS_20261112.md
+index b5acb0c..c2b8ecc 100644
+--- a/docs/STATUS_20261112.md
++++ b/docs/STATUS_20261112.md
+@@ -255,3 +255,42 @@ LJ 的 Ti–Au / Ti–Si 相互作用（0.2–0.3 eV，σ=2.0 Å）没有硅化
+ 
+ 若仍有系统性漂移，则说明 1 eV/ps 下界面仍非稳态，必须换势或降测量温度，
+ 届时再决定是否修改 QC 判据（需人类批准）。
++
++## 11. 两种提取方法的系统性差异（比统计误差大得多）
++
++新增 `tools/tbr_global_fit.py`：不再逐窗口拟合，而是把整条剖面用**全局分段线性模型**
++一次拟合（10 个参数：参考温度 + 5 个层斜率 + 4 个界面温跳），用 ~91 个 bin 约束，
++参数协方差直接给出误差。
++
++在 run_v038（flat，v1.6）上：
++
++| 方法 | TBR (m²K/W) | 说明 |
++|---|---|---|
++| `postprocess.py`（逐窗口外推） | **5.33e-9** | 每侧 16 Å 窗口独立拟合后外推到界面 |
++| `tbr_global_fit.py`（全局拟合） | **1.38e-8** | 全部层同时拟合 |
++
++**差 2.6 倍。** 拟合本身没问题（残差 rms 1.1 K，逐点都在 ±1 K 内），
++问题在数据本身：
++
++```
++Au 层内（z=-20..+20）
++  z=-18: 311.7 K     z=-10: 302.2 K     z=0: 302.0 K     z=+10: 299.1 K   z=+18: 293.6 K
++  靠界面 8 Å 的梯度 −1.2 K/Å，中间 20 Å 只有 −0.15 K/Å
++```
++
++Au 层**不是线性的**：真正的线性区只有中间约 20 Å，两端各 ~8 Å 是界面过渡区
++（Ti 已互混进来）。于是"从窗口外推"和"整层直线"给出不同的界面温跳，
++差 2.6 倍。给全局拟合加界面位移扫描（±3 Å）只让它变化 ±7.6%
++（1.384–1.489e-8），说明**位移不是主因，层内曲率才是**。
++
++### 结论
++
++对当前模型：
++
++1. `TBR_total` 的**方法学不确定度约 ±(2.6 倍)**，远大于 v1.6 已达到的 4–8% 统计误差。
++2. 任何 ≤20% 的图案差异都无法被判据分辨——这不是跑得更久能解决的。
++3. 根因仍是界面互混（Ti 向 Au/Si 扩散，界面宽 ~10 Å），
++   即 `PROTOCOL_V14.md` §5.3 与 §7.4 的同一条结论。
++
++因此 `qc_check.py` 的 R² 判据之外，还应把"提取方法一致性"作为一条门禁
++（两种方法差 ≤20% 才认为 TBR 有意义）。这需要人类批准，我未擅自改判据。
+diff --git a/tools/tbr_global_fit.py b/tools/tbr_global_fit.py
+new file mode 100644
+index 0000000..afd75b9
+--- /dev/null
++++ b/tools/tbr_global_fit.py
+@@ -0,0 +1,183 @@
++#!/usr/bin/env python3
++"""Global piecewise-linear fit of the NEMD temperature profile.
++
++The canonical postprocess.py fits each 16 A window independently (8 bins) and
++extrapolates to the interface, which amplifies the bin noise.  This tool fits
++the whole profile at once:
++
++    T(z) = T0 + b_k (z - z_k,left)        inside layer k
++    jump J_i at interface i               (heat flows +z, so T drops)
++
++with 10 free parameters (1 reference + 5 slopes + 4 interface jumps) constrained
++by ~80-100 occupied 2 A bins.  The TBR is sum(J_i)/q and the parameter
++covariance gives its uncertainty directly.
++
++Bins inside the thermostatted reservoirs (|z| >= reservoir edge) are excluded:
++the region between a reservoir and the free surface is adiabatic and not part of
++the conduction path.
++
++Usage:
++  python3 tools/tbr_global_fit.py --run-dir <run> --seed seed_1001 [--burn 0]
++"""
++from __future__ import annotations
++
++import argparse
++import json
++import math
++import sys
++from pathlib import Path
++
++import numpy as np
++
++sys.path.insert(0, str(Path(__file__).resolve().parent))
++import geomlib  # noqa: E402
++
++
++def parse_blocks(path: Path):
++    blocks = []
++    for raw in path.read_text(encoding="utf-8", errors="replace").splitlines():
++        s = raw.strip()
++        if not s or s.startswith("#") or s.startswith("%"):
++            continue
++        p = s.split()
++        if len(p) == 3:
++            blocks.append({"step": int(p[0]), "rows": []})
++        elif len(p) == 4:
++            blocks[-1]["rows"].append([float(x) for x in p])
++    return blocks
++
++
++def design(z: np.ndarray, layers: list[dict], ifaces: list[float]) -> np.ndarray:
++    """Build the design matrix for the 10-parameter model."""
++    n = len(z)
++    A = np.zeros((n, 1 + len(layers) + len(ifaces)))
++    A[:, 0] = 1.0                      # T0 at the left edge of layer 0
++    # layer slopes: b_k contributes (z - z_k_left) inside layer k
++    for k, lay in enumerate(layers):
++        zl = float(lay["z_min"])
++        m = (z >= zl) & (z <= float(lay["z_max"]))
++        A[m, 1 + k] = z[m] - zl
++    # interface jumps: J_i shifts T for all layers above interface i
++    for i, zi in enumerate(ifaces):
++        A[z > zi, 1 + len(layers) + i] = -1.0
++    return A
++
++
++def fit(z, T, layers, ifaces):
++    ok = np.isfinite(T)
++    z, T = z[ok], T[ok]
++    A = design(z, layers, ifaces)
++    coef, *_ = np.linalg.lstsq(A, T, rcond=None)
++    resid = T - A @ coef
++    dof = max(1, len(T) - A.shape[1])
++    s2 = float(resid @ resid) / dof
++    cov = s2 * np.linalg.pinv(A.T @ A)
++    jumps = coef[1 + len(layers):]
++    return coef, cov, jumps, s2, len(T)
++
++
++def main() -> int:
++    ap = argparse.ArgumentParser()
++    ap.add_argument("--run-dir", required=True)
++    ap.add_argument("--seed", required=True)
++    ap.add_argument("--burn", type=float, default=0.2)
++    ap.add_argument("--blocks", type=int, default=10)
++    ap.add_argument("--iface-shift", type=float, default=0.0,
++                    help="shift every interface/section boundary by this many A "
++                         "(quantifies the systematic from interface placement)")
++    args = ap.parse_args()
++
++    run = Path(args.run_dir).resolve()
++    sd = run / args.seed
++    geom = geomlib.load_json(run / "geom.json")
++    params = geomlib.load_json(run / "params.snapshot.json")
++    layers = geom["layers"]
++    ifaces = [float(i["z"]) + args.iface_shift for i in geom["interfaces"]]
++    if args.iface_shift:
++        # move the linear-segment boundaries with the interfaces
++        b = sorted([float(l["z_min"]) for l in layers] +
++                   [ifaces[i] for i in range(len(ifaces))])
++        for i, lay in enumerate(layers):
++            lay["z_min"] = b[i]
++            lay["z_max"] = b[i + 1] if i + 1 < len(b) else max(b[-1], float(lay["z_max"]))
++    # reservoir exclusion
++    hot = geom["groups"]["hot"]
++    cut = max(abs(float(hot["z_min"])), abs(float(geom["groups"]["cold"]["z_max"])))
++    zg = geom["groups"]["hot"]["z_min"]
++    limit = abs(float(zg))  # e.g. 92
++
++    blocks = parse_blocks(sd / "profile.txt")
++    n0 = int(len(blocks) * args.burn)
++    use = blocks[n0:]
++    nb = len(use[0]["rows"])
++    z = np.array([r[1] for r in use[0]["rows"]])
++    keep = np.abs(z) < limit
++
++    acc = np.zeros(nb); cnt = np.zeros(nb, int)
++    for b in use:
++        a = np.array(b["rows"])
++        occ = a[:, 2] > 0
++        acc[occ] += a[occ, 3]; cnt[occ] += 1
++    T = np.where(cnt > 0, acc / np.maximum(cnt, 1), np.nan)
++    T[~keep] = np.nan
++
++    coef, cov, jumps, s2, ndata = fit(z, T, layers, ifaces)
++    area = float(geom["box"]["lx"]) * float(geom["box"]["ly"])
++    q = (float(params["flux_ev_per_ps"]) * float(params["units"]["ev_per_ps_to_W"])
++         / (area * float(params["units"]["ang2_to_m2"])))
++    nj = len(jumps)
++    idx = slice(1 + len(layers), 1 + len(layers) + nj)
++    J = np.abs(jumps)
++    var_sum = float(cov[idx, idx].sum())
++    tbr = float(J.sum() / q)
++    sig = math.sqrt(max(var_sum, 0.0)) / q
++
++    # block-based cross-check
++    per = []
++    idxs = np.linspace(n0, len(blocks), args.blocks + 1).astype(int)
++    for a, b in zip(idxs[:-1], idxs[1:]):
++        if b <= a:
++            continue
++        acc2 = np.zeros(nb); cnt2 = np.zeros(nb, int)
++        for blk in blocks[a:b]:
++            arr = np.array(blk["rows"]); occ = arr[:, 2] > 0
++            acc2[occ] += arr[occ, 3]; cnt2[occ] += 1
++        T2 = np.where(cnt2 > 0, acc2 / np.maximum(cnt2, 1), np.nan)
++        T2[~keep] = np.nan
++        c2, _, j2, _, _ = fit(z, T2, layers, ifaces)
++        per.append(float(np.abs(j2).sum() / q))
++    per = np.array(per)
++    sem_block = float(per.std(ddof=1) / math.sqrt(len(per))) if len(per) > 1 else float("nan")
++
++    print("=" * 74)
++    print(f"global-fit TBR  {run.name}/{args.seed}")
++    print(f"  blocks={len(blocks)} burn={args.burn:.0%} used={len(use)} "
++          f"bins_fitted={ndata} (excluded |z|>={limit:.0f} A)")
++    print(f"  q = {q:.4e} W/m2   residual rms = {math.sqrt(s2):.3f} K")
++    for i, itf in enumerate(geom["interfaces"]):
++        print(f"  {itf['id']:9s} J = {J[i]:7.2f} K   TBR = {J[i]/q:.3e}")
++    print(f"  TBR = {tbr:.4e} +/- {sig:.2e} (fit cov, {100*sig/tbr:.1f} %) "
++          f"| block sem {sem_block:.2e} ({100*sem_block/tbr:.1f} %)")
++    print("=" * 74)
++
++    out = {
++        "schema_version": "1.0",
++        "method": "global piecewise-linear fit",
++        "run_id": run.name, "seed": args.seed,
++        "blocks_used": len(use), "bins_fitted": int(ndata),
++        "residual_rms_K": math.sqrt(s2),
++        "q_W_m2": q,
++        "jumps_K": [float(v) for v in J],
++        "interfaces": [{"id": itf["id"], "z": ifaces[i], "dT_K": float(J[i]),
++                        "tbr_m2KW": float(J[i] / q)} for i, itf in enumerate(geom["interfaces"])],
++        "dT_total_K": float(J.sum()),
++        "TBR_m2KW": tbr,
++        "TBR_sem_fitcov": sig,
++        "TBR_sem_blocks": sem_block,
++    }
++    geomlib.dump_json(sd / "tbr_global_fit.json", out)
++    return 0
++
++
++if __name__ == "__main__":
++    sys.exit(main())
+-- 
+2.34.1
+

@@ -1,3 +1,0 @@
-scan_id,kind,W_nm,D_nm,P_nm,t_nm,phi_deg,sided,status,note
-VALP350,rect,1.2,0.6,3.5,4.0,0,single,pending,validation of P350 (rank 1)
-VALD040,rect,1.6,0.4,3.0,4.0,0,single,pending,validation of D040 (rank 3)

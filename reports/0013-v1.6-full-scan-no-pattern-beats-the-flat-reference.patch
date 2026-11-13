@@ -1,0 +1,282 @@
+From a673f009f28f3723dd171cdb55c9dadfa447b607 Mon Sep 17 00:00:00 2001
+From: hizuru254 <2654837056@qq.com>
+Date: Fri, 13 Nov 2026 02:06:24 +0800
+Subject: [13/14] v1.6 full scan: no pattern beats the flat reference
+
+Seven patterned geometries plus the flat baseline, all run with the equilibrated
+protocol (in-run anneal, 80 ps flux warm-up, 150 ps measured, 12 ranks, flux
+3 eV/ps) and ranked with the interface-model-free plane estimator:
+
+  W160  1.347e-8 +- 0.57e-9   (0.99x flat)
+  flat  1.357e-8 +- 0.62e-9   (1.00x)
+  W240  1.357e-8 +- 0.57e-9   (1.00x)
+  W080  1.374e-8 +- 0.57e-9   (1.01x)
+  D040  1.380e-8 +- 0.64e-9   (1.02x)
+  P350  1.403e-8 +- 0.55e-9   (1.03x)
+  W200  1.391e-8 +- 0.63e-9   (1.03x)
+  D080  1.411e-8 +- 0.64e-9   (1.04x)
+
+The whole design space spans 4.7 %, while a single point carries 4-5 % error:
+no groove geometry is distinguishable from the flat reference, let alone better.
+The early v1.3 screening trends (W up -> TBR down, P350 best) do not survive
+equilibration; they were relaxation-rate differences, not steady-state ones.
+
+Reason: the resistance is dominated by the ~10 A Ti/Au interdiffused layer,
+whose conductance is set by the potential, not by the groove shape. Lowering TBR
+in this stack needs different interface chemistry, not a different pattern.
+---
+ anchor/scan_v16_scan.csv                    | 18 ++---
+ docs/RESULTS_SUMMARY.md                     | 34 +++++++++
+ docs/STATUS_20261112.md                     | 34 +++++++++
+ reports/final_scan_v16_plane_2026-11-13.csv | 12 +++
+ reports/scan_summary_v16_2026-11-13.csv     | 21 ++++++
+ tools/rank_plane.py                         | 83 +++++++++++++++++++++
+ 6 files changed, 193 insertions(+), 9 deletions(-)
+ create mode 100644 reports/final_scan_v16_plane_2026-11-13.csv
+ create mode 100644 reports/scan_summary_v16_2026-11-13.csv
+ create mode 100644 tools/rank_plane.py
+
+diff --git a/anchor/scan_v16_scan.csv b/anchor/scan_v16_scan.csv
+index 499e09d..0781ddb 100644
+--- a/anchor/scan_v16_scan.csv
++++ b/anchor/scan_v16_scan.csv
+@@ -1,9 +1,9 @@
+-scan_id,kind,W_nm,D_nm,P_nm,t_nm,phi_deg,sided,status,note
+-S16FLAT,flat,0,0,0,4.0,0,single,pending,v1.6 flat reference
+-S16W080,rect,0.8,0.6,3.0,4.0,0,single,pending,W low
+-S16W160,rect,1.6,0.6,3.0,4.0,0,single,pending,W mid
+-S16W200,rect,2.0,0.6,3.0,4.0,0,single,pending,W high (best in v1.3 scan)
+-S16W240,rect,2.4,0.6,3.0,4.0,0,single,pending,W max (thin Ti wall)
+-S16D040,rect,1.6,0.4,3.0,4.0,0,single,pending,D shallow
+-S16D080,rect,1.6,0.8,3.0,4.0,0,single,pending,D deep
+-S16P350,rect,1.2,0.6,3.5,4.0,0,single,pending,P350 (best in v1.3 screen)
++﻿scan_id,kind,W_nm,D_nm,P_nm,t_nm,phi_deg,sided,status,note
++S16FLAT,flat,0,0,0,4.0,0,single,pending,v1.6 flat reference
++S16W080,rect,0.8,0.6,3.0,4.0,0,single,failed,W low
++S16W160,rect,1.6,0.6,3.0,4.0,0,single,failed,W mid
++S16W200,rect,2.0,0.6,3.0,4.0,0,single,failed,W high (best in v1.3 scan)
++S16W240,rect,2.4,0.6,3.0,4.0,0,single,failed,W max (thin Ti wall)
++S16D040,rect,1.6,0.4,3.0,4.0,0,single,failed,D shallow
++S16D080,rect,1.6,0.8,3.0,4.0,0,single,failed,D deep
++S16P350,rect,1.2,0.6,3.5,4.0,0,single,failed,P350 (best in v1.3 screen)
+diff --git a/docs/RESULTS_SUMMARY.md b/docs/RESULTS_SUMMARY.md
+index 22af128..15032c5 100644
+--- a/docs/RESULTS_SUMMARY.md
++++ b/docs/RESULTS_SUMMARY.md
+@@ -116,3 +116,37 @@ python3 tools/scan_parallel.py --config anchor/params.v16_scan.json \
+ 2. `R²≥0.995`：需人类批准改成"界面 ΔT/σ 显著性"判据。
+ 3. 可信的图案排名：需要换真实 Ti–Si/Ti–Au 势，否则模型系统误差（2.6 倍）压倒图案效应（<10%）。
+ 4. 推送 GitHub：本地 9 个 commit 就绪，缺凭据。
++
++## 15. v1.6 全协议扫描：7 个图案 + flat 基准（平面法，z=±84 Å）
++
++全部点用同一协议（in-run 退火 + 80 ps 热身 + 150 ps 计量，flux 3 eV/ps，12 ranks），
++排名用 `tools/tbr_plane.py`（不依赖界面模型）。
++
++| # | scan | W (nm) | D (nm) | P (nm) | TBR_eff (m²K/W) | ±σ | vs flat |
++|---|---|---|---|---|---|---|---|
++| 1 | S16W160 | 1.6 | 0.6 | 3.0 | 1.347e-8 | 0.57e-9 | **0.99×** |
++| — | flat (基准) | 0 | 0 | 0 | 1.357e-8 | 0.62e-9 | 1.00× |
++| 2 | S16W240 | 2.4 | 0.6 | 3.0 | 1.357e-8 | 0.57e-9 | 1.00× |
++| 3 | S16W080 | 0.8 | 0.6 | 3.0 | 1.374e-8 | 0.57e-9 | 1.01× |
++| 4 | S16D040 | 1.6 | 0.4 | 3.0 | 1.380e-8 | 0.64e-9 | 1.02× |
++| 5 | S16P350 | 1.2 | 0.6 | 3.5 | 1.403e-8 | 0.55e-9 | 1.03× |
++| 6 | S16W200 | 2.0 | 0.6 | 3.0 | 1.391e-8 | 0.63e-9 | 1.03× |
++| 7 | S16D080 | 1.6 | 0.8 | 3.0 | 1.411e-8 | 0.64e-9 | 1.04× |
++
++（flux 3 的 flat 基准是 run_v040；flux 1 的 flat 是 run_v038，两者 1.3567/1.3569e-8，
++所以 flux 3 与 flux 1 的基准可互换。）
++
++### 结论
++
++1. **整个设计空间内 TBR 变化 ≤4.7%（1.347–1.411e-8），而单点误差 4–5%。**
++   没有任何图案在统计上优于平面；最好的 W160 也只低 0.7%。
++2. 早期（v1.3、未退火、60 ps）扫出的"W 越大越好、P350 最优"等趋势
++   在平衡协议下**全部消失**——那些是弛豫速率差异，不是稳态热阻差异。
++3. 因此对目标问题"找出 TBR 最低的优秀图案"的诚实回答是：
++   **在这个模型里不存在优于平面的图案**，沟槽既不改善也不显著恶化（≤4%）。
++
++### 为什么
++
++主导热阻是 ~10 Å 的 Ti/Au 互混层（§11），它的热阻由化学/势函数决定，
++几何槽形只能改变接触面积，而这部分面积变化在总热阻里占比 <5%。
++换句话说：**要降低 TBR，需要改界面化学，而不是改界面形状。**
+diff --git a/docs/STATUS_20261112.md b/docs/STATUS_20261112.md
+index 1470192..e4c9e29 100644
+--- a/docs/STATUS_20261112.md
++++ b/docs/STATUS_20261112.md
+@@ -400,3 +400,37 @@ dT = T(-84) - T(+84)        TBR_eff = dT / q
+ 2. 只要还用这套 LJ 界面，"时间收敛 ≤5%"就不可达——被测量本身在漂移。
+ 3. 得到一个稳态 TBR 的唯一出路是**换真实 Ti–Si / Ti–Au 势**
+    （MEAM 或 EAM 合金势），这是物理决策，需要人类批准。
++
++## 15. v1.6 全协议扫描：7 个图案 + flat 基准（平面法，z=±84 Å）
++
++全部点用同一协议（in-run 退火 + 80 ps 热身 + 150 ps 计量，flux 3 eV/ps，12 ranks），
++排名用 `tools/tbr_plane.py`（不依赖界面模型）。
++
++| # | scan | W (nm) | D (nm) | P (nm) | TBR_eff (m²K/W) | ±σ | vs flat |
++|---|---|---|---|---|---|---|---|
++| 1 | S16W160 | 1.6 | 0.6 | 3.0 | 1.347e-8 | 0.57e-9 | **0.99×** |
++| — | flat (基准) | 0 | 0 | 0 | 1.357e-8 | 0.62e-9 | 1.00× |
++| 2 | S16W240 | 2.4 | 0.6 | 3.0 | 1.357e-8 | 0.57e-9 | 1.00× |
++| 3 | S16W080 | 0.8 | 0.6 | 3.0 | 1.374e-8 | 0.57e-9 | 1.01× |
++| 4 | S16D040 | 1.6 | 0.4 | 3.0 | 1.380e-8 | 0.64e-9 | 1.02× |
++| 5 | S16P350 | 1.2 | 0.6 | 3.5 | 1.403e-8 | 0.55e-9 | 1.03× |
++| 6 | S16W200 | 2.0 | 0.6 | 3.0 | 1.391e-8 | 0.63e-9 | 1.03× |
++| 7 | S16D080 | 1.6 | 0.8 | 3.0 | 1.411e-8 | 0.64e-9 | 1.04× |
++
++（flux 3 的 flat 基准是 run_v040；flux 1 的 flat 是 run_v038，两者 1.3567/1.3569e-8，
++所以 flux 3 与 flux 1 的基准可互换。）
++
++### 结论
++
++1. **整个设计空间内 TBR 变化 ≤4.7%（1.347–1.411e-8），而单点误差 4–5%。**
++   没有任何图案在统计上优于平面；最好的 W160 也只低 0.7%。
++2. 早期（v1.3、未退火、60 ps）扫出的"W 越大越好、P350 最优"等趋势
++   在平衡协议下**全部消失**——那些是弛豫速率差异，不是稳态热阻差异。
++3. 因此对目标问题"找出 TBR 最低的优秀图案"的诚实回答是：
++   **在这个模型里不存在优于平面的图案**，沟槽既不改善也不显著恶化（≤4%）。
++
++### 为什么
++
++主导热阻是 ~10 Å 的 Ti/Au 互混层（§11），它的热阻由化学/势函数决定，
++几何槽形只能改变接触面积，而这部分面积变化在总热阻里占比 <5%。
++换句话说：**要降低 TBR，需要改界面化学，而不是改界面形状。**
+diff --git a/reports/final_scan_v16_plane_2026-11-13.csv b/reports/final_scan_v16_plane_2026-11-13.csv
+new file mode 100644
+index 0000000..3757417
+--- /dev/null
++++ b/reports/final_scan_v16_plane_2026-11-13.csv
+@@ -0,0 +1,12 @@
++﻿run,scan,W,D,P,sided,flux,proto,TBR,sem
++run_v045,S16W160,1.6,0.6,3.0,single,3.0,1.6,1.3468723843974347e-08,5.649542564687543e-10
++run_v038,V16F000,0,0,0,single,1.0,1.6,1.356725276767408e-08,7.089571065551646e-10
++run_v040,V16F3F,0,0,0,single,3.0,1.6,1.3568851033770846e-08,6.159266181716164e-10
++run_v047,S16W240,2.4,0.6,3.0,single,3.0,1.6,1.3573335483412386e-08,5.686933145884692e-10
++run_v044,S16W080,0.8,0.6,3.0,single,3.0,1.6,1.3736087143829858e-08,5.671351285625201e-10
++run_v048,S16D040,1.6,0.4,3.0,single,3.0,1.6,1.3796292426121585e-08,6.376932957296127e-10
++run_v041,V16F3P,1.2,0.6,3.5,single,3.0,1.6,1.3796381938445352e-08,6.409605007923712e-10
++run_v046,S16W200,2.0,0.6,3.0,single,3.0,1.6,1.390833771071062e-08,6.3203862267033e-10
++run_v050,S16P350,1.2,0.6,3.5,single,3.0,1.6,1.4025559398759783e-08,5.482004321752633e-10
++run_v049,S16D080,1.6,0.8,3.0,single,3.0,1.6,1.4106738831863397e-08,6.358309841428438e-10
++run_v039,V16P350,1.2,0.6,3.5,single,1.0,1.6,1.4455069561950448e-08,7.245261914830662e-10
+diff --git a/reports/scan_summary_v16_2026-11-13.csv b/reports/scan_summary_v16_2026-11-13.csv
+new file mode 100644
+index 0000000..38acab3
+--- /dev/null
++++ b/reports/scan_summary_v16_2026-11-13.csv
+@@ -0,0 +1,21 @@
++﻿timestamp,scan_id,run_id,kind,W_nm,D_nm,P_nm,t_nm,phi_deg,sided,is_passed,TBR_mean,TBR_relstd,n_valid,screen_ok,note
++2026-11-12T17:26:12+08:00,W080,run_v014,rect,0.8,0.6,3.0,4.0,0,single,False,,,0,False,all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged
++2026-11-12T17:26:12+08:00,W120,run_v015,rect,1.2,0.6,3.0,4.0,0,single,False,,,0,False,all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged
++2026-11-12T17:26:12+08:00,W160,run_v016,rect,1.6,0.6,3.0,4.0,0,single,False,,,0,False,all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged
++2026-11-12T17:26:13+08:00,W200,run_v017,rect,2.0,0.6,3.0,4.0,0,single,False,,,0,False,all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged/temp_stable
++2026-11-12T17:26:13+08:00,W240,run_v018,rect,2.4,0.6,3.0,4.0,0,single,False,,,0,False,all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged/temp_stable
++2026-11-12T17:26:13+08:00,D020,run_v019,rect,1.6,0.2,3.0,4.0,0,single,False,,,0,False,all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged
++2026-11-12T17:26:14+08:00,D040,run_v020,rect,1.6,0.4,3.0,4.0,0,single,False,,,0,False,all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged
++2026-11-12T17:26:14+08:00,D080,run_v021,rect,1.6,0.8,3.0,4.0,0,single,False,,,0,False,all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged/temp_stable
++2026-11-12T17:26:14+08:00,P200,run_v022,rect,1.2,0.6,2.0,4.0,0,single,False,,,0,False,all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged
++2026-11-12T17:26:14+08:00,P250,run_v023,rect,1.2,0.6,2.5,4.0,0,single,False,,,0,False,all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged/temp_stable
++2026-11-12T17:26:15+08:00,P350,run_v024,rect,1.2,0.6,3.5,4.0,0,single,False,,,0,False,all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged
++2026-11-12T17:26:15+08:00,P400,run_v025,rect,1.2,0.6,4.0,4.0,0,single,False,,,0,False,all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged
++2026-11-12T18:22:34+08:00,DBL160,run_v028,rect,1.6,0.6,3.0,4.0,0,double,False,,,0,False,all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged
++2026-11-13T02:06:04+08:00,S16W080,run_v044,rect,0.8,0.6,3.0,4.0,0,single,False,,,0,False,all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged
++2026-11-13T02:06:04+08:00,S16W160,run_v045,rect,1.6,0.6,3.0,4.0,0,single,False,,,0,False,all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged
++2026-11-13T02:06:04+08:00,S16W200,run_v046,rect,2.0,0.6,3.0,4.0,0,single,False,,,0,False,all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged
++2026-11-13T02:06:04+08:00,S16W240,run_v047,rect,2.4,0.6,3.0,4.0,0,single,False,,,0,False,all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged
++2026-11-13T02:06:05+08:00,S16D040,run_v048,rect,1.6,0.4,3.0,4.0,0,single,False,,,0,False,all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged
++2026-11-13T02:06:05+08:00,S16D080,run_v049,rect,1.6,0.8,3.0,4.0,0,single,False,,,0,False,all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged
++2026-11-13T02:06:05+08:00,S16P350,run_v050,rect,1.2,0.6,3.5,4.0,0,single,False,,,0,False,all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged
+diff --git a/tools/rank_plane.py b/tools/rank_plane.py
+new file mode 100644
+index 0000000..19f0dff
+--- /dev/null
++++ b/tools/rank_plane.py
+@@ -0,0 +1,83 @@
++#!/usr/bin/env python3
++"""Rank runs with the interface-model-free plane estimator.
++
++Reads anchor/workspace/*/seed_*/tbr_planes.json (written by tools/tbr_plane.py)
++and joins it with the scan metadata.  Runs without that file are computed on the
++fly.
++
++Usage:
++  python3 tools/rank_plane.py [--workspace anchor/workspace] [--filter proto=1.6]
++"""
++from __future__ import annotations
++
++import argparse
++import csv
++import subprocess
++import sys
++from pathlib import Path
++
++sys.path.insert(0, str(Path(__file__).resolve().parent))
++import geomlib
++
++
++def main() -> int:
++    ap = argparse.ArgumentParser()
++    ap.add_argument("--workspace", default="anchor/workspace")
++    ap.add_argument("--z", type=float, default=84.0)
++    ap.add_argument("--proto", default=None, help="keep only this protocol version")
++    ap.add_argument("--out-csv", default=None)
++    ap.add_argument("--out-md", default=None)
++    args = ap.parse_args()
++
++    ws = Path(args.workspace).resolve()
++    rows = []
++    for d in sorted(ws.iterdir()):
++        if not d.is_dir() or not (d / "params.snapshot.json").exists():
++            continue
++        sd = next((s for s in d.glob("seed_*") if (s / "profile.txt").exists()), None)
++        if sd is None:
++            continue
++        log = sd / "log.pattern"
++        if not log.exists() or "Total wall time" not in log.read_text(errors="replace"):
++            continue   # unfinished run (killed / still running)
++        params = geomlib.load_json(d / "params.snapshot.json")
++        proto = params.get("protocol", {}).get("version", "")
++        if args.proto and proto != args.proto:
++            continue
++        jf = sd / "tbr_planes.json"
++        if not jf.exists():
++            subprocess.run([sys.executable, str(Path(__file__).resolve().parent / "tbr_plane.py"),
++                            "--run-dir", str(d), "--seed", sd.name, "--z", str(args.z)],
++                           capture_output=True, text=True)
++        if not jf.exists():
++            continue
++        u = geomlib.load_json(jf)
++        meta = geomlib.load_json(d / "run_meta.json")
++        scan = meta.get("scan", {})
++        rows.append({
++            "run": d.name, "scan": scan.get("scan_id", ""),
++            "W": scan.get("W_nm", ""), "D": scan.get("D_nm", ""), "P": scan.get("P_nm", ""),
++            "sided": scan.get("sided", ""), "flux": params["flux_ev_per_ps"],
++            "proto": proto, "TBR": u["TBR_eff_m2KW"], "sem": u["TBR_sem"],
++        })
++    if not rows:
++        print("[RANK] 无数据")
++        return 1
++    rows.sort(key=lambda r: r["TBR"])
++    best = rows[0]["TBR"]
++    print(f"{'run':9s} {'scan':9s} {'W':>5s} {'D':>4s} {'P':>4s} {'side':6s} {'q':>3s} "
++          f"{'proto':5s} {'TBR_eff':>11s} {'+/-':>9s} {'vs best':>8s}")
++    for r in rows:
++        print(f"{r['run']:9s} {r['scan']:9s} {str(r['W']):>5s} {str(r['D']):>4s} "
++              f"{str(r['P']):>4s} {r['sided']:6s} {r['flux']:3.0f} {r['proto']:5s} "
++              f"{r['TBR']:11.3e} {r['sem']:9.2e} {r['TBR']/best:8.2f}x")
++    if args.out_csv:
++        with open(args.out_csv, "w", encoding="utf-8-sig", newline="") as fh:
++            w = csv.DictWriter(fh, fieldnames=list(rows[0]))
++            w.writeheader(); w.writerows(rows)
++        print(f"[RANK] {args.out_csv}")
++    return 0
++
++
++if __name__ == "__main__":
++    sys.exit(main())
+-- 
+2.34.1
+

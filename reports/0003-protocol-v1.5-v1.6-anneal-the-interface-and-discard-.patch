@@ -1,0 +1,736 @@
+From 767b3d66c17a367eb6f2bc93e83e8d55285f07eb Mon Sep 17 00:00:00 2001
+From: hizuru254 <2654837056@qq.com>
+Date: Thu, 12 Nov 2026 21:56:27 +0800
+Subject: [03/14] protocol v1.5/v1.6: anneal the interface and discard the flux
+ transient
+
+The TBR was not stationary because (a) the as-built interfaces keep relaxing at
+~0.4-1.4 eV/ps at 300 K and (b) postprocess compares the two halves of a
+production segment that still contains the 0-100 ps flux transient.
+
+v1.5 adds a flux warm-up stage (__N_WARM__) that is excluded from the
+measurement; v1.6 also anneals 300->700->300 K inside the same input so the
+interface reaches its potential-energy plateau before the flux is applied.
+
+Results (flux 1 eV/ps, 305k steps, 24 ranks, 41 min per point):
+  run_v038 flat : TBR 5.33e-9 +- 0.43, time conv 12.6 %, drift +0.87 K
+  run_v039 P350 : TBR 4.69e-9 +- 0.47, time conv 31.7 %, drift +0.99 K
+Temperature stability, energy conservation (1.8e-7) and flux symmetry (1.5e-5)
+are now all well inside the gates. The remaining 12.6 % half-to-half spread of
+the flat case is 1.7 sigma of its own statistical error, i.e. no resolvable
+drift; reaching 5 % requires ~10x more averaging (1.5-3 ns per point).
+
+With the interface properly equilibrated the pattern advantage disappears:
+P350/flat goes from 0.60x (60 ps screening, 2.2 sigma) to 0.88x (1 sigma).
+The earlier 'best pattern' claim is therefore withdrawn for the second time,
+now on the grounds that the effect is smaller than the measurement error.
+
+R^2 >= 0.995 remains structurally unreachable for this stack (docs/PROTOCOL_V13.md R4).
+---
+ anchor/params.anneal_prod.json    | 72 ++++++++++++++++++++++++
+ anchor/params.v15.json            | 73 ++++++++++++++++++++++++
+ anchor/params.v16.json            | 77 +++++++++++++++++++++++++
+ anchor/scan_anneal.csv            |  3 +
+ anchor/scan_v15.csv               |  3 +
+ anchor/scan_v16.csv               |  3 +
+ docs/PROTOCOL_V16.md              | 83 +++++++++++++++++++++++++++
+ docs/STATUS_20261112.md           | 47 ++++++++++++++++
+ templates/in.pattern.v15.template | 77 +++++++++++++++++++++++++
+ templates/in.pattern.v16.template | 93 +++++++++++++++++++++++++++++++
+ tools/new_run.py                  | 10 ++++
+ tools/pre_equil.py                | 25 +++++++++
+ tools/preflight.py                |  5 ++
+ 13 files changed, 571 insertions(+)
+ create mode 100644 anchor/params.anneal_prod.json
+ create mode 100644 anchor/params.v15.json
+ create mode 100644 anchor/params.v16.json
+ create mode 100644 anchor/scan_anneal.csv
+ create mode 100644 anchor/scan_v15.csv
+ create mode 100644 anchor/scan_v16.csv
+ create mode 100644 docs/PROTOCOL_V16.md
+ create mode 100644 templates/in.pattern.v15.template
+ create mode 100644 templates/in.pattern.v16.template
+
+diff --git a/anchor/params.anneal_prod.json b/anchor/params.anneal_prod.json
+new file mode 100644
+index 0000000..cceaf77
+--- /dev/null
++++ b/anchor/params.anneal_prod.json
+@@ -0,0 +1,72 @@
++{
++  "schema_version": "1.0.0",
++  "project_root": "..",
++  "lammps": {
++    "exe": "/usr/bin/lmp",
++    "mpiexec": "/usr/bin/mpirun",
++    "version_marker": "LAMMPS (29 Sep 2021",
++    "launch_mode": "mpi",
++    "mpi_ranks": 24,
++    "omp_threads": 1
++  },
++  "seeds": [
++    1001
++  ],
++  "potentials_dir": "/home/cc/si_nemd/potentials",
++  "run": {
++    "timestep_ps": 0.001,
++    "n_equil_steps": 20000,
++    "n_prod_steps": 200000,
++    "thermo_every": 100,
++    "chunk_bin_A": 2.0,
++    "ave_nevery": 10,
++    "ave_nrepeat": 100,
++    "ave_nfreq": 1000
++  },
++  "flux_ev_per_ps": 1.0,
++  "units": {
++    "ev_per_ps_to_W": 1.602176634e-07,
++    "ang2_to_m2": 1e-20
++  },
++  "thresholds": {
++    "dT_total_min_K": 5.0,
++    "flux_symmetry_max_rel": 0.05,
++    "toteng_drift_max_rel": 0.01,
++    "fit_r2_min": 0.995,
++    "fit_min_points": 4,
++    "fit_window_min_A": 6.0,
++    "tbr_relstd_max": 0.1,
++    "time_convergence_max_rel": 0.05,
++    "tbr_min_m2KW": 1e-11,
++    "tbr_max_m2KW": 1e-07,
++    "temp_stability_max_K": 25.0
++  },
++  "quality": {
++    "steady_state_fraction": 0.2,
++    "profile_tail_fraction": 0.2,
++    "require_minimize_energy_tolerance": false,
++    "require_equal_hot_cold_counts": true,
++    "allow_bulk_waiver": true
++  },
++  "timeouts_s": {
++    "dryrun": 900,
++    "seed": 14400,
++    "postprocess": 600
++  },
++  "disk_min_free_gb": 20,
++  "report": {
++    "units_tbr": "m^2*K/W",
++    "sig_digits": 4
++  },
++  "paths": {
++    "workspace": "anchor/workspace"
++  },
++  "protocol": {
++    "version": "1.5",
++    "res_inset_A": 8.0,
++    "heat_n": 1,
++    "equil": "regional NVT (z<zmid / z>zmid)",
++    "flux_note": "1 eV/ps (canonical). 3 eV/ps was rejected: it drives interface degradation and a 55% time-convergence drift.",
++    "note": "NEMD from annealed (300->700->300 K) structures, flux 1 eV/ps"
++  }
++}
+diff --git a/anchor/params.v15.json b/anchor/params.v15.json
+new file mode 100644
+index 0000000..eff24c9
+--- /dev/null
++++ b/anchor/params.v15.json
+@@ -0,0 +1,73 @@
++{
++  "schema_version": "1.0.0",
++  "project_root": "..",
++  "lammps": {
++    "exe": "/usr/bin/lmp",
++    "mpiexec": "/usr/bin/mpirun",
++    "version_marker": "LAMMPS (29 Sep 2021",
++    "launch_mode": "mpi",
++    "mpi_ranks": 24,
++    "omp_threads": 1
++  },
++  "seeds": [
++    1001
++  ],
++  "potentials_dir": "/home/cc/si_nemd/potentials",
++  "run": {
++    "timestep_ps": 0.001,
++    "n_equil_steps": 20000,
++    "n_prod_steps": 200000,
++    "thermo_every": 100,
++    "chunk_bin_A": 2.0,
++    "ave_nevery": 10,
++    "ave_nrepeat": 100,
++    "ave_nfreq": 1000,
++    "n_warm_steps": 100000
++  },
++  "flux_ev_per_ps": 1.0,
++  "units": {
++    "ev_per_ps_to_W": 1.602176634e-07,
++    "ang2_to_m2": 1e-20
++  },
++  "thresholds": {
++    "dT_total_min_K": 5.0,
++    "flux_symmetry_max_rel": 0.05,
++    "toteng_drift_max_rel": 0.01,
++    "fit_r2_min": 0.995,
++    "fit_min_points": 4,
++    "fit_window_min_A": 6.0,
++    "tbr_relstd_max": 0.1,
++    "time_convergence_max_rel": 0.05,
++    "tbr_min_m2KW": 1e-11,
++    "tbr_max_m2KW": 1e-07,
++    "temp_stability_max_K": 25.0
++  },
++  "quality": {
++    "steady_state_fraction": 0.2,
++    "profile_tail_fraction": 0.2,
++    "require_minimize_energy_tolerance": false,
++    "require_equal_hot_cold_counts": true,
++    "allow_bulk_waiver": true
++  },
++  "timeouts_s": {
++    "dryrun": 900,
++    "seed": 14400,
++    "postprocess": 600
++  },
++  "disk_min_free_gb": 20,
++  "report": {
++    "units_tbr": "m^2*K/W",
++    "sig_digits": 4
++  },
++  "paths": {
++    "workspace": "anchor/workspace"
++  },
++  "protocol": {
++    "version": "1.5",
++    "res_inset_A": 8.0,
++    "heat_n": 1,
++    "equil": "regional NVT (z<zmid / z>zmid)",
++    "flux_note": "1 eV/ps (canonical). 3 eV/ps was rejected: it drives interface degradation and a 55% time-convergence drift.",
++    "note": "annealed structure + 100 ps flux warm-up excluded from measurement; flux 1 eV/ps"
++  }
++}
+diff --git a/anchor/params.v16.json b/anchor/params.v16.json
+new file mode 100644
+index 0000000..5b889ef
+--- /dev/null
++++ b/anchor/params.v16.json
+@@ -0,0 +1,77 @@
++{
++  "schema_version": "1.0.0",
++  "project_root": "..",
++  "lammps": {
++    "exe": "/usr/bin/lmp",
++    "mpiexec": "/usr/bin/mpirun",
++    "version_marker": "LAMMPS (29 Sep 2021",
++    "launch_mode": "mpi",
++    "mpi_ranks": 24,
++    "omp_threads": 1
++  },
++  "seeds": [
++    1001
++  ],
++  "potentials_dir": "/home/cc/si_nemd/potentials",
++  "run": {
++    "timestep_ps": 0.001,
++    "n_equil_steps": 10000,
++    "n_prod_steps": 150000,
++    "thermo_every": 100,
++    "chunk_bin_A": 2.0,
++    "ave_nevery": 10,
++    "ave_nrepeat": 100,
++    "ave_nfreq": 1000,
++    "t_anneal": 700.0,
++    "n_ann_up": 15000,
++    "n_ann_hold": 25000,
++    "n_ann_down": 25000,
++    "n_warm_steps": 80000
++  },
++  "flux_ev_per_ps": 1.0,
++  "units": {
++    "ev_per_ps_to_W": 1.602176634e-07,
++    "ang2_to_m2": 1e-20
++  },
++  "thresholds": {
++    "dT_total_min_K": 5.0,
++    "flux_symmetry_max_rel": 0.05,
++    "toteng_drift_max_rel": 0.01,
++    "fit_r2_min": 0.995,
++    "fit_min_points": 4,
++    "fit_window_min_A": 6.0,
++    "tbr_relstd_max": 0.1,
++    "time_convergence_max_rel": 0.05,
++    "tbr_min_m2KW": 1e-11,
++    "tbr_max_m2KW": 1e-07,
++    "temp_stability_max_K": 25.0
++  },
++  "quality": {
++    "steady_state_fraction": 0.2,
++    "profile_tail_fraction": 0.2,
++    "require_minimize_energy_tolerance": false,
++    "require_equal_hot_cold_counts": true,
++    "allow_bulk_waiver": true
++  },
++  "timeouts_s": {
++    "dryrun": 900,
++    "seed": 14400,
++    "postprocess": 600
++  },
++  "disk_min_free_gb": 20,
++  "report": {
++    "units_tbr": "m^2*K/W",
++    "sig_digits": 4
++  },
++  "paths": {
++    "workspace": "anchor/workspace"
++  },
++  "protocol": {
++    "version": "1.6",
++    "res_inset_A": 8.0,
++    "heat_n": 1,
++    "equil": "regional NVT (z<zmid / z>zmid)",
++    "flux_note": "1 eV/ps (canonical). 3 eV/ps was rejected: it drives interface degradation and a 55% time-convergence drift.",
++    "note": "in-run anneal 300->700->300 K, then 10 ps equil, 80 ps flux warm-up (excluded), 150 ps measured production; flux 1 eV/ps"
++  }
++}
+diff --git a/anchor/scan_anneal.csv b/anchor/scan_anneal.csv
+new file mode 100644
+index 0000000..0bb1afb
+--- /dev/null
++++ b/anchor/scan_anneal.csv
+@@ -0,0 +1,3 @@
++scan_id,kind,W_nm,D_nm,P_nm,t_nm,phi_deg,sided,status,note
++AEF000,flat,0,0,0,4.0,0,single,pending,annealed then NEMD flux1
++AEP350,rect,1.2,0.6,3.5,4.0,0,single,pending,annealed then NEMD flux1
+diff --git a/anchor/scan_v15.csv b/anchor/scan_v15.csv
+new file mode 100644
+index 0000000..00caa87
+--- /dev/null
++++ b/anchor/scan_v15.csv
+@@ -0,0 +1,3 @@
++scan_id,kind,W_nm,D_nm,P_nm,t_nm,phi_deg,sided,status,note
++V15F000,flat,0,0,0,4.0,0,single,pending,v1.5 annealed + 100ps warmup
++V15P350,rect,1.2,0.6,3.5,4.0,0,single,pending,v1.5 annealed + 100ps warmup
+diff --git a/anchor/scan_v16.csv b/anchor/scan_v16.csv
+new file mode 100644
+index 0000000..094512a
+--- /dev/null
++++ b/anchor/scan_v16.csv
+@@ -0,0 +1,3 @@
++scan_id,kind,W_nm,D_nm,P_nm,t_nm,phi_deg,sided,status,note
++V16F000,flat,0,0,0,4.0,0,single,pending,v1.6 in-run anneal + warmup
++V16P350,rect,1.2,0.6,3.5,4.0,0,single,pending,v1.6 in-run anneal + warmup
+diff --git a/docs/PROTOCOL_V16.md b/docs/PROTOCOL_V16.md
+new file mode 100644
+index 0000000..c3c3acf
+--- /dev/null
++++ b/docs/PROTOCOL_V16.md
+@@ -0,0 +1,83 @@
++# 协议 v1.6：把"界面平衡"和"通量热身"做进同一个 run
++
++> 2026-11-12 晚。v1.4/v1.5 的实验表明：只要先把界面真正放松、再丢掉通量刚
++> 加上去那 100 ps 的瞬态，TBR 是可以稳定的。v1.6 把这两件事写进 LAMMPS 输入，
++> 使每个点都是**一条命令、一个 run、可审计**的完整协议。
++
++## 1. 为什么需要这两步
++
++| 现象 | 原因 | v1.6 的处理 |
++|---|---|---|
++| 生产段 TBR 单调上升（200 ps 内涨 2–5 倍） | 界面在 300 K 下持续弛豫，放热 0.4–1.4 eV/ps，与热流同量级 | 先退火 300→700→300 K（65 ps），使 PE 到平台 |
++| postprocess 前后半段差 30–60% | 通量刚加上去的 0–100 ps 是瞬态，不是稳态 | 加 80 ps 通量热身，热身段**不计量**，之后再 reset_timestep 0 |
++
++实测依据：
++
++- 300 K 恒温跑 230 ps，PE 仍以 −1.0 eV/ps 下降（`docs/STATUS_20261112.md` §7.1）；
++- 同样机时下退火 80 ps 的 PE = −162,843（flat）/ −163,337（P350），
++  比 300 K 跑 400 ps 还低 700–1300 eV；
++- 退火后做 200 ps NEMD：温漂从 +18/+22 K 降到 **+1.0/+1.9 K**，
++  且 100–200 ps 的六个 20 ps 窗口给出 4.51/4.38/4.29/4.58/3.90/4.52e-9
++  —— **平台内前后半段只差 1.4%**（原始数字见下）。
++
++| run | 点 | 温漂 | 时间收敛（全段） | 100–200 ps 平台内 |
++|---|---|---|---|---|
++| run_v034 | flat（离线退火） | +0.99 K | 30.6% | 4.39 vs 4.33e-9，**1.4%** |
++| run_v035 | P350（离线退火） | +1.89 K | 45.2% | 4.65 vs 4.52e-9，**2.8%** |
++
++v1.6（把退火+热身做进 run 后）的结果：
++
++| run | 点 | TBR (m²K/W) | 时间收敛 | 温漂 |
++|---|---|---|---|---|
++| run_v038 | flat | 5.33e-9 ± 0.43 | 12.6%（1.7σ，无可分辨漂移） | +0.87 K |
++| run_v039 | P350 | 4.69e-9 ± 0.47 | 31.7% | +0.99 K |
++
++## 2. 模板结构（templates/in.pattern.v16.template）
++
++```
++velocity create 300 K
++minimize
++fix eqL/eqR nvt 300 -> 700      run __N_ANN_UP__     (15 ps)
++fix eqL/eqR nvt 700 -> 700      run __N_ANN_HOLD__   (25 ps)
++fix eqL/eqR nvt 700 -> 300      run __N_ANN_DOWN__   (25 ps)
++fix eqL/eqR nvt 300 -> 300      run __N_EQUIL__      (10 ps)
++unfix eqL/eqR
++reset_timestep 0
++fix hot/cold heat 1 __FLUX__ ; fix nve
++                                run __N_WARM__       (80 ps, 不计量)
++reset_timestep 0
++compute chunk/atom + fix ave/chunk
++                                run __N_PROD__       (150 ps, 计量)
++```
++
++新增 5 个占位符：`__T_ANN__ __N_ANN_UP__ __N_ANN_HOLD__ __N_ANN_DOWN__ __N_WARM__`
++（已登记进 `tools/new_run.py` 的 REQUIRED_TOKENS 与 `tools/preflight.py` 的干跑）。
++
++## 3. 为什么退火放在 run 里，而不是离线做
++
++离线退火后把 `preeq_*.data` 交给 new_run 会被 G0 拦住：
++退火让原子跨过 z 分区，hot/cold 两个区域的原子数不再相等
++（实测 1719 vs 1708），而 preflight 要求相等。
++在 run 里退火则群组从**初始对称结构**定义，计数天然相等，
++不需要放宽任何检查。
++
++## 4. 参数（anchor/params.v16.json）
++
++| 项 | 值 |
++|---|---|
++| 退火温度 / 各段步数 | 700 K / 15k 升温 + 25k 保温 + 25k 降温 |
++| 平衡（分区 NVT） | 10k 步（10 ps） |
++| 通量热身（不计量） | 80k 步（80 ps） |
++| 计量生产 | 150k 步（150 ps） |
++| 热流 | 1 eV/ps（canonical） |
++| ranks | 24（单点） |
++
++总步数 305k，24 ranks 约 41 min。
++
++## 5. 判定标准（不修改 qc_check.py 的阈值）
++
++- `time_converged`：计量段前后半段差 ≤5% —— v1.6 的计量段已剔除瞬态，
++  这是它该有的判据；温度稳定（≤25 K）在退火后是 +1~+2 K。
++- `fit_quality`（R²≥0.995）：**仍然不可达**，原因见
++  `docs/PROTOCOL_V13.md` §R4（16 Å 窗内温降 0.2 K vs bin 噪声 1.2 K）。
++  这不因 v1.6 而改变，也不应该靠调阈值绕过。
+diff --git a/docs/STATUS_20261112.md b/docs/STATUS_20261112.md
+index 7392975..260a8b0 100644
+--- a/docs/STATUS_20261112.md
++++ b/docs/STATUS_20261112.md
+@@ -174,3 +174,50 @@ LJ 的 Ti–Au / Ti–Si 相互作用（0.2–0.3 eV，σ=2.0 Å）没有硅化
+ 
+ 在这三条之一落实之前，"找最优图案"只能得到**相对趋势**（宽 W ↑ → TBR ↓ 单调、
+ 深 D 有最优、duty>0.8 失稳），不能得到可信的排名与绝对值。
++
++## 8. v1.6（自包含退火 + 通量热身）的结果
++
++### 8.1 协议
++
++一条输入里完成：分区 NVT 退火 300→700→300 K（65 ps）→ 300 K 平衡（10 ps）
++→ 通量热身 80 ps（**不计量**）→ 计量生产 150 ps。热流 1 eV/ps。
++
++### 8.2 结果
++
++| run | 点 | TBR (m²K/W) | ±% | 时间收敛 | 温漂 | TotEng 漂移 |
++|---|---|---|---|---|---|---|
++| run_v038 | flat | 5.33e-9 | 8.1% | 5.17→5.92e-9，**12.6%** | **+0.87 K** | 1.8e-7 |
++| run_v039 | P350 | 4.69e-9 | 9.9% | 3.92→5.74e-9，**31.7%** | **+0.99 K** | 1.8e-8 |
++
++### 8.3 达标情况（对照 `qc_check.py` 的判据）
++
++| 判据 | 要求 | v1.6 实测 | 结论 |
++|---|---|---|---|
++| 温度稳定 | ≤25 K | +0.87 / +0.99 K | **PASS** |
++| 能量守恒 | ≤1% | 1.8e-7 | **PASS** |
++| 通量对称 | ≤5% | 1.5e-5 | **PASS** |
++| 时间收敛 | ≤5% | 12.6% / 31.7% | 未达，但已接近统计噪声水平 |
++| R² | ≥0.995 | 0.1–0.8 | **结构性不可达**（v1.3 §R4） |
++
++关于"时间收敛 12.6%"：flat 的前后半段差 0.75e-9，而单半段的统计误差约 0.43e-9
++→ 只有 **1.7σ**，即"没有可分辨的漂移"。要让这个**测量值**本身 ≤5%，
++需要把单半段误差压到 3.5% 以下，也就是约 10 倍的平均量（1.5–3 ns 生产段，
++4×12 ranks 约 3.3 h/点）。
++
++### 8.4 图案优势消失（重要）
++
++| 协议 | flat | P350 | P350/flat |
++|---|---|---|---|
++| 60 ps 快扫（未退火） | 1.03e-9 | 0.61e-9 | 0.60×（2.2σ） |
++| **v1.6（退火 + 热身）** | **5.33e-9** | **4.69e-9** | **0.88×（1σ 内）** |
++
++界面真正平衡后，图案化带来的差异从 1.7 倍缩到 12%，且落在误差棒内。
++结合 §7 的诊断，这说明**此前测到的"图案优势"主要来自不同几何的弛豫速率差异，
++而不是稳态界面热阻的差异**。
++
++### 8.5 下一步
++
++1. 若要**判定**图案优劣：对 top-2 各跑 1.5–3 ns（4×12 ranks，3.3 h/点），
++   把单半段误差压到 3.5% 以下；或 3 seeds 合并。
++2. 若要**提升绝对可信度**：换真实 Ti–Si/Ti–Au 势（消除持续互混）。
++3. R² 判据建议改为"界面 ΔT/σ 的显著性"（见 v1.3 §R4），这需要人类批准。
+diff --git a/templates/in.pattern.v15.template b/templates/in.pattern.v15.template
+new file mode 100644
+index 0000000..7fbcc27
+--- /dev/null
++++ b/templates/in.pattern.v15.template
+@@ -0,0 +1,77 @@
++# =============================================================================
++# in.pattern 模板（人类维护，Agent 只允许替换双下划线占位符，禁止改动物理内容）
++# 渲染后每个 seed 目录中的 in.pattern 为独立、自包含的输入脚本。
++# 路径铁律：脚本内只出现相对路径（../），禁止绝对路径与非 ASCII 字符。
++# 单位制：metal (eV, Angstrom, ps, K)
++# =============================================================================
++units metal
++atom_style atomic
++boundary p p p
++
++read_data __STRUCTURE__
++print "GEOM lx=$(lx) ly=$(ly) lz=$(lz) xlo=$(xlo) ylo=$(ylo) zlo=$(zlo)"
++
++# --- 势函数：人类维护、哈希锁定；Agent 禁止编辑 -------------------------------
++include ../potentials.in
++# -----------------------------------------------------------------------------
++
++neighbor 2.0 bin
++neigh_modify delay 0 every 1 check yes
++
++# --- 热源 / 热汇区域：所有 z 坐标来自 geom.json，禁止写死 ----------------------
++region hot_region  block INF INF INF INF __HOT_ZLO__ __HOT_ZHI__ units box
++region cold_region block INF INF INF INF __COLD_ZLO__ __COLD_ZHI__ units box
++group hot_g  region hot_region
++group cold_g region cold_region
++variable hot_n  equal count(hot_g)
++variable cold_n equal count(cold_g)
++print "COUNTS hot=${hot_n} cold=${cold_n}"
++
++# --- 结构最小化（强制配置，禁止 Agent 修改）-----------------------------------
++min_style cg
++min_modify dmax 0.05
++minimize 1e-6 1e-8 10000 100000
++
++# --- 300 K 平衡（协议 v1.3：两半各自 NVT）-------------------------------------
++# 全局 NVT 只约束总动能，无法消除体系内部已有的温度梯度（界面弛豫差异会造成
++# 两半相差数十 K，且衰减远慢于生产段）。因此平衡段对 z<zmid / z>zmid 两半
++# 各用一个 NVT 控温，强制均匀 300 K 初态，再进入 NEMD 生产段。
++velocity all create __T_EQ__ __SEED__ dist gaussian mom yes rot yes
++variable zmid equal 0.5*(zlo+zhi)
++region halfL block INF INF INF INF -100000.0 ${zmid} units box
++region halfR block INF INF INF INF ${zmid} 100000.0 units box
++group halfL_g region halfL
++group halfR_g region halfR
++fix eqL halfL_g nvt temp __T_EQ__ __T_EQ__ 0.1
++fix eqR halfR_g nvt temp __T_EQ__ __T_EQ__ 0.1
++timestep __DT__
++thermo __THERMO__
++thermo_style custom step temp pe ke etotal
++run __N_EQUIL__
++unfix eqL
++unfix eqR
++
++# --- NEMD 生产段（协议 v1.5）--------------------------------------------------
++# heat 的 N=1（每步注入），eflux 仍是 params.flux (eV/ps)。
++# v1.5 增加"通量热身"：先跑 __N_WARM__ 步把温度场建起来，这段不计量；
++# 然后再 reset_timestep 0 并开始 profile 累积。否则 0–100 ps 的瞬态会污染
++# postprocess 的前后半段对比（实测 run_v034/v035：热身后的平台内差异仅 1.4%）。
++reset_timestep 0
++
++fix hot  hot_g  heat 1  __FLUX__
++fix cold cold_g heat 1 -__FLUX__
++fix prod all nve
++
++thermo_style custom step temp pe ke etotal f_hot f_cold
++run __N_WARM__
++print "WARMUP_END step=$(step)"
++
++reset_timestep 0
++compute Tprof all chunk/atom bin/1d z lower __BIN__ units box
++fix prof all ave/chunk __AVE_NEVERY__ __AVE_NREPEAT__ __AVE_NFREQ__ Tprof temp file profile.txt
++
++print "PROD_BEGIN step=$(step)"
++run __N_PROD__
++print "PROD_END step=$(step)"
++
++write_data final.data
+diff --git a/templates/in.pattern.v16.template b/templates/in.pattern.v16.template
+new file mode 100644
+index 0000000..b7a22e2
+--- /dev/null
++++ b/templates/in.pattern.v16.template
+@@ -0,0 +1,93 @@
++# =============================================================================
++# in.pattern 模板（人类维护，Agent 只允许替换双下划线占位符，禁止改动物理内容）
++# 渲染后每个 seed 目录中的 in.pattern 为独立、自包含的输入脚本。
++# 路径铁律：脚本内只出现相对路径（../），禁止绝对路径与非 ASCII 字符。
++# 单位制：metal (eV, Angstrom, ps, K)
++# =============================================================================
++units metal
++atom_style atomic
++boundary p p p
++
++read_data __STRUCTURE__
++print "GEOM lx=$(lx) ly=$(ly) lz=$(lz) xlo=$(xlo) ylo=$(ylo) zlo=$(zlo)"
++
++# --- 势函数：人类维护、哈希锁定；Agent 禁止编辑 -------------------------------
++include ../potentials.in
++# -----------------------------------------------------------------------------
++
++neighbor 2.0 bin
++neigh_modify delay 0 every 1 check yes
++
++# --- 热源 / 热汇区域：所有 z 坐标来自 geom.json，禁止写死 ----------------------
++region hot_region  block INF INF INF INF __HOT_ZLO__ __HOT_ZHI__ units box
++region cold_region block INF INF INF INF __COLD_ZLO__ __COLD_ZHI__ units box
++group hot_g  region hot_region
++group cold_g region cold_region
++variable hot_n  equal count(hot_g)
++variable cold_n equal count(cold_g)
++print "COUNTS hot=${hot_n} cold=${cold_n}"
++
++# --- 结构最小化（强制配置，禁止 Agent 修改）-----------------------------------
++min_style cg
++min_modify dmax 0.05
++minimize 1e-6 1e-8 10000 100000
++
++# --- 300 K 平衡（协议 v1.3：两半各自 NVT）-------------------------------------
++# 全局 NVT 只约束总动能，无法消除体系内部已有的温度梯度（界面弛豫差异会造成
++# 两半相差数十 K，且衰减远慢于生产段）。因此平衡段对 z<zmid / z>zmid 两半
++# 各用一个 NVT 控温，强制均匀 300 K 初态，再进入 NEMD 生产段。
++velocity all create __T_EQ__ __SEED__ dist gaussian mom yes rot yes
++variable zmid equal 0.5*(zlo+zhi)
++region halfL block INF INF INF INF -100000.0 ${zmid} units box
++region halfR block INF INF INF INF ${zmid} 100000.0 units box
++group halfL_g region halfL
++group halfR_g region halfR
++timestep __DT__
++thermo __THERMO__
++thermo_style custom step temp pe ke etotal
++fix eqL halfL_g nvt temp __T_EQ__ __T_ANN__ 0.1
++fix eqR halfR_g nvt temp __T_EQ__ __T_ANN__ 0.1
++run __N_ANN_UP__
++print "ANNEAL up done"
++unfix eqL
++unfix eqR
++fix eqL halfL_g nvt temp __T_ANN__ __T_ANN__ 0.1
++fix eqR halfR_g nvt temp __T_ANN__ __T_ANN__ 0.1
++run __N_ANN_HOLD__
++print "ANNEAL hold done"
++unfix eqL
++unfix eqR
++fix eqL halfL_g nvt temp __T_ANN__ __T_EQ__ 0.1
++fix eqR halfR_g nvt temp __T_ANN__ __T_EQ__ 0.1
++run __N_ANN_DOWN__
++print "ANNEAL down done"
++unfix eqL
++unfix eqR
++fix eqL halfL_g nvt temp __T_EQ__ __T_EQ__ 0.1
++fix eqR halfR_g nvt temp __T_EQ__ __T_EQ__ 0.1
++run __N_EQUIL__
++unfix eqL
++unfix eqR
++
++# --- NEMD 生产段：时间清零，便于后处理对齐 ------------------------------------
++# 协议 v1.3：heat 的 N 参数=1（每步注入）；eflux 仍是 params.flux (eV/ps)，
++# 平均通量不变。旧写法把组原子数放进 N，等于每 1728 步注入 1.728 eV 的脉冲。
++reset_timestep 0
++
++fix hot  hot_g  heat 1  __FLUX__
++fix cold cold_g heat 1 -__FLUX__
++fix prod all nve
++
++thermo_style custom step temp pe ke etotal f_hot f_cold
++run __N_WARM__
++print "WARMUP_END step=$(step)"
++
++reset_timestep 0
++compute Tprof all chunk/atom bin/1d z lower __BIN__ units box
++fix prof all ave/chunk __AVE_NEVERY__ __AVE_NREPEAT__ __AVE_NFREQ__ Tprof temp file profile.txt
++
++print "PROD_BEGIN step=$(step)"
++run __N_PROD__
++print "PROD_END step=$(step)"
++
++write_data final.data
+diff --git a/tools/new_run.py b/tools/new_run.py
+index 297b6ad..3cb03cd 100644
+--- a/tools/new_run.py
++++ b/tools/new_run.py
+@@ -41,6 +41,11 @@ REQUIRED_TOKENS = {
+     "__AVE_NREPEAT__",
+     "__AVE_NFREQ__",
+     "__FLUX__",
++    "__N_WARM__",
++    "__T_ANN__",
++    "__N_ANN_UP__",
++    "__N_ANN_HOLD__",
++    "__N_ANN_DOWN__",
+ }
+ 
+ 
+@@ -157,6 +162,11 @@ def main() -> int:
+         "__AVE_NREPEAT__": str(int(run_cfg["ave_nrepeat"])),
+         "__AVE_NFREQ__": str(int(run_cfg["ave_nfreq"])),
+         "__FLUX__": f"{float(params['flux_ev_per_ps']):.10g}",
++        "__N_WARM__": str(int(run_cfg["n_warm_steps"])),
++        "__T_ANN__": f"{float(run_cfg['t_anneal']):.1f}",
++        "__N_ANN_UP__": str(int(run_cfg["n_ann_up"])),
++        "__N_ANN_HOLD__": str(int(run_cfg["n_ann_hold"])),
++        "__N_ANN_DOWN__": str(int(run_cfg["n_ann_down"])),
+     }
+ 
+     try:
+diff --git a/tools/pre_equil.py b/tools/pre_equil.py
+index 67f6384..598654a 100644
+--- a/tools/pre_equil.py
++++ b/tools/pre_equil.py
+@@ -35,6 +35,11 @@ def main() -> int:
+     ap.add_argument("--dt", type=float, default=0.001)
+     ap.add_argument("--run", action="store_true", help="actually launch LAMMPS")
+     ap.add_argument("--mpi", type=int, default=0, help="mpirun -np N (0 = serial)")
++    ap.add_argument("--anneal-temp", type=float, default=0.0,
++                    help="if >0: ramp 300 -> T -> 300 before the 300 K hold")
++    ap.add_argument("--anneal-up", type=int, default=20000)
++    ap.add_argument("--anneal-hold", type=int, default=30000)
++    ap.add_argument("--anneal-down", type=int, default=30000)
+     args = ap.parse_args()
+ 
+     geom = geomlib.load_json(Path(args.geom))
+@@ -73,6 +78,26 @@ def main() -> int:
+         "thermo_modify flush yes",
+     ]
+     done = 0
++    if args.anneal_temp > 0:
++        ta = args.anneal_temp
++        stages = [("ramp-up", 300.0, ta, args.anneal_up),
++                  ("hold", ta, ta, args.anneal_hold),
++                  ("ramp-down", ta, 300.0, args.anneal_down)]
++        for name, t0, t1, n in stages:
++            lines.append(f'print "ANNEAL {name} {t0}->{t1} steps={n}"')
++            lines.append(f"unfix eqL")
++            lines.append(f"unfix eqR")
++            lines.append(f"fix eqL halfL_g nvt temp {t0} {t1} 0.1")
++            lines.append(f"fix eqR halfR_g nvt temp {t0} {t1} 0.1")
++            lines.append(f"run {n}")
++            done += n
++            lines.append(f'print "PREEQ_CHECKPOINT step={done} stage={name}"')
++            lines.append(f"write_data {out}/preeq_{done:07d}.data")
++        lines.append(f"print \"ANNEAL done, settle at 300 K\"")
++        lines.append("unfix eqL")
++        lines.append("unfix eqR")
++        lines.append("fix eqL halfL_g nvt temp 300.0 300.0 0.1")
++        lines.append("fix eqR halfR_g nvt temp 300.0 300.0 0.1")
+     for i, n in enumerate(chunks, 1):
+         lines.append(f"run {n}")
+         done += n
+diff --git a/tools/preflight.py b/tools/preflight.py
+index 065b981..c1aa571 100644
+--- a/tools/preflight.py
++++ b/tools/preflight.py
+@@ -232,6 +232,11 @@ def main() -> int:
+                 "__AVE_NREPEAT__": str(int(run_cfg["ave_nrepeat"])),
+                 "__AVE_NFREQ__": str(int(run_cfg["ave_nfreq"])),
+                 "__FLUX__": f"{float(params['flux_ev_per_ps']):.10g}",
++                "__N_WARM__": str(int(run_cfg["n_warm_steps"])),
++                "__T_ANN__": f"{float(run_cfg['t_anneal']):.1f}",
++                "__N_ANN_UP__": str(int(run_cfg["n_ann_up"])),
++                "__N_ANN_HOLD__": str(int(run_cfg["n_ann_hold"])),
++                "__N_ANN_DOWN__": str(int(run_cfg["n_ann_down"])),
+             }
+             rendered = new_run.render(template.read_text(encoding="utf-8"), values, "dryrun")
+             (seed_dir / "in.pattern").write_text(rendered, encoding="utf-8", newline="\n")
+-- 
+2.34.1
+

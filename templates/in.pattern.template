@@ -32,28 +32,60 @@ min_style cg
 min_modify dmax 0.05
 minimize 1e-6 1e-8 10000 100000
 
-# --- 300 K 平衡（NVT）---------------------------------------------------------
+# --- 300 K 平衡（协议 v1.3：两半各自 NVT）-------------------------------------
+# 全局 NVT 只约束总动能，无法消除体系内部已有的温度梯度（界面弛豫差异会造成
+# 两半相差数十 K，且衰减远慢于生产段）。因此平衡段对 z<zmid / z>zmid 两半
+# 各用一个 NVT 控温，强制均匀 300 K 初态，再进入 NEMD 生产段。
 velocity all create __T_EQ__ __SEED__ dist gaussian mom yes rot yes
-fix eq all nvt temp __T_EQ__ __T_EQ__ 0.1
+variable zmid equal 0.5*(zlo+zhi)
+region halfL block INF INF INF INF -100000.0 ${zmid} units box
+region halfR block INF INF INF INF ${zmid} 100000.0 units box
+group halfL_g region halfL
+group halfR_g region halfR
 timestep __DT__
 thermo __THERMO__
 thermo_style custom step temp pe ke etotal
+fix eqL halfL_g nvt temp __T_EQ__ __T_ANN__ 0.1
+fix eqR halfR_g nvt temp __T_EQ__ __T_ANN__ 0.1
+run __N_ANN_UP__
+print "ANNEAL up done"
+unfix eqL
+unfix eqR
+fix eqL halfL_g nvt temp __T_ANN__ __T_ANN__ 0.1
+fix eqR halfR_g nvt temp __T_ANN__ __T_ANN__ 0.1
+run __N_ANN_HOLD__
+print "ANNEAL hold done"
+unfix eqL
+unfix eqR
+fix eqL halfL_g nvt temp __T_ANN__ __T_EQ__ 0.1
+fix eqR halfR_g nvt temp __T_ANN__ __T_EQ__ 0.1
+run __N_ANN_DOWN__
+print "ANNEAL down done"
+unfix eqL
+unfix eqR
+fix eqL halfL_g nvt temp __T_EQ__ __T_EQ__ 0.1
+fix eqR halfR_g nvt temp __T_EQ__ __T_EQ__ 0.1
 run __N_EQUIL__
-unfix eq
+unfix eqL
+unfix eqR
 
 # --- NEMD 生产段：时间清零，便于后处理对齐 ------------------------------------
-# 协议 v1.2：heat 的 N 参数=1（每步注入）；eflux 仍是 params.flux (eV/ps)，
+# 协议 v1.3：heat 的 N 参数=1（每步注入）；eflux 仍是 params.flux (eV/ps)，
 # 平均通量不变。旧写法把组原子数放进 N，等于每 1728 步注入 1.728 eV 的脉冲。
 reset_timestep 0
-
-compute Tprof all chunk/atom bin/1d z lower __BIN__ units box
-fix prof all ave/chunk __AVE_NEVERY__ __AVE_NREPEAT__ __AVE_NFREQ__ Tprof temp file profile.txt
 
 fix hot  hot_g  heat 1  __FLUX__
 fix cold cold_g heat 1 -__FLUX__
 fix prod all nve
 
 thermo_style custom step temp pe ke etotal f_hot f_cold
+run __N_WARM__
+print "WARMUP_END step=$(step)"
+
+reset_timestep 0
+compute Tprof all chunk/atom bin/1d z lower __BIN__ units box
+fix prof all ave/chunk __AVE_NEVERY__ __AVE_NREPEAT__ __AVE_NFREQ__ Tprof temp file profile.txt
+
 print "PROD_BEGIN step=$(step)"
 run __N_PROD__
 print "PROD_END step=$(step)"

@@ -1,3 +1,0 @@
-scan_id,kind,W_nm,D_nm,P_nm,t_nm,phi_deg,sided,status,note
-AEF000,flat,0,0,0,4.0,0,single,pending,annealed then NEMD flux1
-AEP350,rect,1.2,0.6,3.5,4.0,0,single,pending,annealed then NEMD flux1

@@ -1,3 +1,0 @@
-scan_id,kind,W_nm,D_nm,P_nm,t_nm,phi_deg,sided,status,note
-ANCHOR,flat,0,0,0,4.0,0,single,pending,flat v1 Si/Ti/Au/Ti/Si Ti20 bin4
-S001,rect,1.629,0.8,3.258,4.0,0,single,pending,rect B Ti24 D8 bin2

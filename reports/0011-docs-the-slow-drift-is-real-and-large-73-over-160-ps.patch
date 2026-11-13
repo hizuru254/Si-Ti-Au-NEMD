@@ -1,0 +1,53 @@
+From 12d00dc36cdefa93bea1b847f725e1d5ee0ceb20 Mon Sep 17 00:00:00 2001
+From: hizuru254 <2654837056@qq.com>
+Date: Thu, 12 Nov 2026 23:24:49 +0800
+Subject: [11/14] docs: the slow drift is real and large (+73% over 160 ps)
+
+Mid-run analysis of the 1.6 ns jobs (run_v042/v043) with the plane estimator in
+20 ps windows: TBR_eff grows monotonically 1.06e-8 -> 1.83e-8 for flat and
+1.12e-8 -> 1.82e-8 for P350, i.e. +73 % over 160 ps, with no sign of a plateau.
+
+Consequences:
+  * time_converged <= 5 % cannot be met at the 200 ps scale -- the measured
+    quantity itself is changing, not just the noise;
+  * every TBR reported so far is a snapshot, which explains the 3x spread
+    between protocol generations in the re-ranking table;
+  * the only stable statement is the relative one: P350 stays 5-7 % above flat
+    at every time, i.e. grooves do not help.
+---
+ docs/STATUS_20261112.md | 22 ++++++++++++++++++++++
+ 1 file changed, 22 insertions(+)
+
+diff --git a/docs/STATUS_20261112.md b/docs/STATUS_20261112.md
+index 5de3e18..7a7f241 100644
+--- a/docs/STATUS_20261112.md
++++ b/docs/STATUS_20261112.md
+@@ -348,3 +348,25 @@ dT = T(-84) - T(+84)        TBR_eff = dT / q
+ `TBR_eff` 的前后半段仍差 ~22%（σ 约 5%，即 4.5σ）——慢漂移真实存在，
+ 即界面仍在演化。这正是 run_v042/v043（1.6 ns）要回答的：
+ 把 σ 降到 ~1.6% 后，看这 22% 是持续上升还是围着一个平台波动。
++
++## 13. 慢漂移是真实的，而且幅度很大（run_v042/v043 中期数据）
++
++1.6 ns 长算例跑到 ~170 ps 时，用平面法按 20 ps 窗口统计：
++
++| run | 点 | 20 ps 窗口序列 (1e-8 m²K/W) | 前半均值 | 后半均值 | 变化 |
++|---|---|---|---|---|---|
++| run_v042 | flat | 1.06 1.09 1.21 1.41 1.47 1.47 1.57 1.83 | 1.195 | 1.583 | **+32%** |
++| run_v043 | P350 | 1.12 1.29 1.26 1.46 1.50 1.62 1.71 1.82 | 1.281 | 1.661 | **+30%** |
++
++从第一个窗口到第八个窗口是 **+73%**（1.06→1.83），单调，无平台迹象；
++两个几何同步上涨，且 P350 始终比 flat 高 5–7%。
++
++这说明：
++
++1. `time_converged ≤5%` 在 200 ps 量级上**不可能达标**——不是统计问题，
++   是被测量的量本身在变。
++2. 之前所有"TBR"都只是**某个时刻的快照**；把它们互相比较（尤其跨协议、跨时长）
++   是没有意义的，这解释了为什么协议代次之间数值差 3 倍（§12 重算表）。
++3. 图案的相对关系（P350 高 5–7%）在整段时间里保持一致——**这是目前唯一稳定的结论**。
++
++长算例继续跑（预计 02:30 完成），用于判断 1.6 ns 处是否饱和。
+-- 
+2.34.1
+

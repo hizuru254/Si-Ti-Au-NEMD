@@ -1,0 +1,586 @@
+From 4e85973a4cd46fb6ce9002cb052f352c4c1e1b0a Mon Sep 17 00:00:00 2001
+From: hizuru254 <2654837056@qq.com>
+Date: Thu, 12 Nov 2026 20:14:39 +0800
+Subject: [02/14] protocol v1.4: pre-equilibration tooling and the
+ non-stationarity verdict
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Adds tools/pre_equil.py (checkpointed regional-NVT pre-equilibration) and
+tools/preeq_report.py (dPE/dt monitor), plus the experiments that show the
+TBR drift is intrinsic to the model rather than to the initial state or flux.
+
+Evidence (docs/STATUS_20261112.md §7):
+  * 230 ps of 300 K pre-equilibration lowers PotEng by 2398 eV at a steady
+    ~1 eV/ps, i.e. no plateau.
+  * NEMD started from the 200 ps checkpoint still shows 54-57 % half-to-half
+    TBR drift (same as without pre-equilibration).
+  * Dropping the flux back to the canonical 1 eV/ps does not stabilise it
+    either (24-61 % drift, +18..+22 K global heating).
+  * Ti keeps dissolving into the Au film (700-790 atoms inside |z|<20 A), so
+    every interface keeps roughening and the measured TBR grows with time
+    (P350: 0.61e-9 at 60 ps -> 3.37e-9 at 200 ps).
+
+Consequence: no trustworthy pattern ranking is possible with this model until
+the interface is stabilised (real Ti-Si/Ti-Au potential, ns-scale
+equilibration, or a lower measurement temperature). The earlier v1.3 claim
+that 3 eV/ps improves the measurement is withdrawn here.
+---
+ anchor/params.flux1.json                | 71 ++++++++++++++++++
+ anchor/params.preeq_prod.json           | 72 +++++++++++++++++++
+ anchor/scan_flux1.csv                   |  3 +
+ anchor/scan_preeq.csv                   |  3 +
+ docs/PROTOCOL_V14.md                    | 93 ++++++++++++++++++++++++
+ docs/STATUS_20261112.md                 | 52 ++++++++++++++
+ reports/flux_preeq_tests_2026-11-12.csv |  9 +++
+ tools/pre_equil.py                      | 96 +++++++++++++++++++++++++
+ tools/preeq_report.py                   | 80 +++++++++++++++++++++
+ 9 files changed, 479 insertions(+)
+ create mode 100644 anchor/params.flux1.json
+ create mode 100644 anchor/params.preeq_prod.json
+ create mode 100644 anchor/scan_flux1.csv
+ create mode 100644 anchor/scan_preeq.csv
+ create mode 100644 docs/PROTOCOL_V14.md
+ create mode 100644 reports/flux_preeq_tests_2026-11-12.csv
+ create mode 100644 tools/pre_equil.py
+ create mode 100644 tools/preeq_report.py
+
+diff --git a/anchor/params.flux1.json b/anchor/params.flux1.json
+new file mode 100644
+index 0000000..8a46705
+--- /dev/null
++++ b/anchor/params.flux1.json
+@@ -0,0 +1,71 @@
++{
++  "schema_version": "1.0.0",
++  "project_root": "..",
++  "lammps": {
++    "exe": "/usr/bin/lmp",
++    "mpiexec": "/usr/bin/mpirun",
++    "version_marker": "LAMMPS (29 Sep 2021",
++    "launch_mode": "mpi",
++    "mpi_ranks": 24,
++    "omp_threads": 1
++  },
++  "seeds": [
++    1001
++  ],
++  "potentials_dir": "/home/cc/si_nemd/potentials",
++  "run": {
++    "timestep_ps": 0.001,
++    "n_equil_steps": 50000,
++    "n_prod_steps": 200000,
++    "thermo_every": 100,
++    "chunk_bin_A": 2.0,
++    "ave_nevery": 10,
++    "ave_nrepeat": 100,
++    "ave_nfreq": 1000
++  },
++  "flux_ev_per_ps": 1.0,
++  "units": {
++    "ev_per_ps_to_W": 1.602176634e-07,
++    "ang2_to_m2": 1e-20
++  },
++  "thresholds": {
++    "dT_total_min_K": 5.0,
++    "flux_symmetry_max_rel": 0.05,
++    "toteng_drift_max_rel": 0.01,
++    "fit_r2_min": 0.995,
++    "fit_min_points": 4,
++    "fit_window_min_A": 6.0,
++    "tbr_relstd_max": 0.1,
++    "time_convergence_max_rel": 0.05,
++    "tbr_min_m2KW": 1e-11,
++    "tbr_max_m2KW": 1e-07,
++    "temp_stability_max_K": 25.0
++  },
++  "quality": {
++    "steady_state_fraction": 0.2,
++    "profile_tail_fraction": 0.2,
++    "require_minimize_energy_tolerance": false,
++    "require_equal_hot_cold_counts": true,
++    "allow_bulk_waiver": true
++  },
++  "timeouts_s": {
++    "dryrun": 900,
++    "seed": 14400,
++    "postprocess": 600
++  },
++  "disk_min_free_gb": 20,
++  "report": {
++    "units_tbr": "m^2*K/W",
++    "sig_digits": 4
++  },
++  "paths": {
++    "workspace": "anchor/workspace"
++  },
++  "protocol": {
++    "version": "1.3",
++    "res_inset_A": 8.0,
++    "heat_n": 1,
++    "equil": "regional NVT (z<zmid / z>zmid)",
++    "flux_note": "1 eV/ps (canonical). 3 eV/ps was rejected: it drives interface degradation and a 55% time-convergence drift."
++  }
++}
+diff --git a/anchor/params.preeq_prod.json b/anchor/params.preeq_prod.json
+new file mode 100644
+index 0000000..c033a83
+--- /dev/null
++++ b/anchor/params.preeq_prod.json
+@@ -0,0 +1,72 @@
++{
++  "schema_version": "1.0.0",
++  "project_root": "..",
++  "lammps": {
++    "exe": "/usr/bin/lmp",
++    "mpiexec": "/usr/bin/mpirun",
++    "version_marker": "LAMMPS (29 Sep 2021",
++    "launch_mode": "mpi",
++    "mpi_ranks": 24,
++    "omp_threads": 1
++  },
++  "seeds": [
++    1001
++  ],
++  "potentials_dir": "/home/cc/si_nemd/potentials",
++  "run": {
++    "timestep_ps": 0.001,
++    "n_equil_steps": 20000,
++    "n_prod_steps": 200000,
++    "thermo_every": 100,
++    "chunk_bin_A": 2.0,
++    "ave_nevery": 10,
++    "ave_nrepeat": 100,
++    "ave_nfreq": 1000
++  },
++  "flux_ev_per_ps": 3.0,
++  "units": {
++    "ev_per_ps_to_W": 1.602176634e-07,
++    "ang2_to_m2": 1e-20
++  },
++  "thresholds": {
++    "dT_total_min_K": 5.0,
++    "flux_symmetry_max_rel": 0.05,
++    "toteng_drift_max_rel": 0.01,
++    "fit_r2_min": 0.995,
++    "fit_min_points": 4,
++    "fit_window_min_A": 6.0,
++    "tbr_relstd_max": 0.1,
++    "time_convergence_max_rel": 0.05,
++    "tbr_min_m2KW": 1e-11,
++    "tbr_max_m2KW": 1e-07,
++    "temp_stability_max_K": 25.0
++  },
++  "quality": {
++    "steady_state_fraction": 0.2,
++    "profile_tail_fraction": 0.2,
++    "require_minimize_energy_tolerance": false,
++    "require_equal_hot_cold_counts": true,
++    "allow_bulk_waiver": true
++  },
++  "timeouts_s": {
++    "dryrun": 900,
++    "seed": 14400,
++    "postprocess": 600
++  },
++  "disk_min_free_gb": 20,
++  "report": {
++    "units_tbr": "m^2*K/W",
++    "sig_digits": 4
++  },
++  "paths": {
++    "workspace": "anchor/workspace"
++  },
++  "protocol": {
++    "version": "1.4",
++    "res_inset_A": 8.0,
++    "heat_n": 1,
++    "equil": "regional NVT (z<zmid / z>zmid)",
++    "flux_note": "3 eV/ps; TBR(q=1)=1.93e-9+-0.44e-9 vs TBR(q=3)=2.17e-9+-0.24e-9 -> linear",
++    "note": "NEMD from a 400 ps regional-NVT pre-equilibrated structure"
++  }
++}
+diff --git a/anchor/scan_flux1.csv b/anchor/scan_flux1.csv
+new file mode 100644
+index 0000000..7520a07
+--- /dev/null
++++ b/anchor/scan_flux1.csv
+@@ -0,0 +1,3 @@
++scan_id,kind,W_nm,D_nm,P_nm,t_nm,phi_deg,sided,status,note
++F1FLAT,flat,0,0,0,4.0,0,single,pending,flux 1 eV/ps 200 ps production
++F1P350,rect,1.2,0.6,3.5,4.0,0,single,pending,flux 1 eV/ps 200 ps production
+diff --git a/anchor/scan_preeq.csv b/anchor/scan_preeq.csv
+new file mode 100644
+index 0000000..737a285
+--- /dev/null
++++ b/anchor/scan_preeq.csv
+@@ -0,0 +1,3 @@
++scan_id,kind,W_nm,D_nm,P_nm,t_nm,phi_deg,sided,status,note
++PEF000,flat,0,0,0,4.0,0,single,pending,production after 400 ps pre-equilibration
++PEP350,rect,1.2,0.6,3.5,4.0,0,single,pending,production after 400 ps pre-equilibration
+diff --git a/docs/PROTOCOL_V14.md b/docs/PROTOCOL_V14.md
+new file mode 100644
+index 0000000..e6a2958
+--- /dev/null
++++ b/docs/PROTOCOL_V14.md
+@@ -0,0 +1,93 @@
++# 协议 v1.4：先平衡界面，再测 TBR
++
++> 2026-11-12 晚。v1.3 修好了温度剖面本身（热源位置、注入方式、分区平衡），
++> 但发现**测出来的 TBR 不收敛**：随时间单调上升。本文件记录原因、量化、
++> 以及第一步补救（长预平衡）。
++
++## 1. 现象
++
++200 ps 生产段里 TBR 不是平台，而是单调上升：
++
++| 点 | 20 ps | 60 ps | 100 ps | 160 ps | 全段 200 ps |
++|---|---|---|---|---|---|
++| P350（run_v026） | 1.21e-9 | 1.32e-9 | 2.79e-9 | 4.23e-9 | 3.37e-9 |
++| D040（run_v027） | 1.83e-9 | 2.90e-9 | 3.89e-9 | 5.07e-9 | 3.75e-9 |
++
++## 2. 原因：界面在持续弛豫，放热与热流同量级
++
++从生产段日志里直接读 PotEng 与 Temp（`step temp poteng kineng etotal`）：
++
++| run | t=1 ps | t=180 ps | ΔPE | 末端 dPE/dt | ΔT |
++|---|---|---|---|---|---|
++| run_v026 (P350) | −162391.7 | −162559.7 | −168 eV | −0.43 eV/ps | +27 K |
++| run_v027 (D040) | −160509.5 | −161742.2 | −1233 eV | −1.38 eV/ps | +217 K |
++| run_v013 (flat) | −161893.1 | −161965.3 | −72 eV | −0.72 eV/ps | +11 K |
++
++生产段是 NVE，界面释放的势能直接变成动能 → 温度升高 → 温度剖面里混入
++"界面弛豫热"，ΔT 随界面粗化一起变大。施加的热流是 1–3 eV/ps，
++弛豫放热 0.4–1.4 eV/ps —— **同一个量级**，所以测出来的不是热阻，是弛豫。
++
++## 3. 预平衡实测（tools/pre_equil.py）
++
++区域 NVT、300 K、每 100 ps 写一个检查点，读 PotEng 判断是否到平台：
++
++| 结构 | t=0（最小化后） | 100 ps | 200 ps | 230 ps | 末端 dPE/dt |
++|---|---|---|---|---|---|
++| F000 (flat) | −159696.6 | −161976.2 | −162067.2 | −162095 | ≈ −1.0 eV/ps |
++| P350 | 见 preeq 日志 | — | — | — | ≈ −1 eV/ps |
++
++**结论：230 ps 仍未到平台**，PE 已累计下降 2398 eV，速率没有明显衰减。
++按此速率，要把 dPE/dt 压到 0.05 eV/ps 以下，需要 **1–3 ns** 的预平衡。
++
++## 4. 成本
++
++| 配置 | 吞吐 | 1 ns 单点 | 1 ns × 4 点并行 |
++|---|---|---|---|
++| 24 ranks × 1 job | 123 steps/s | 2.3 h | — |
++| 4 job × 12 ranks | 65 steps/s each | 4.3 h | 4.3 h |
++
++（并发 rank 总数不得超过 48，见 `AGENT_MANUAL_V5_WSL.txt` §14.2）
++
++## 5. 判定实验：预平衡与热流都不是主因
++
++### 5.1 用 200 ps 预平衡结构做 NEMD（run_v030 / run_v031，flux 3）
++
++| run | 点 | TBR | 时间收敛 |
++|---|---|---|---|
++| run_v030 | flat | 4.46e-9 ± 0.26 | 2.36→5.13e-9，**54%** |
++| run_v031 | P350 | 3.33e-9 ± 0.24 | 1.70→3.94e-9，**57%** |
++
++未预平衡时是 55%。**预平衡没有改善** → 漂移不是初始态造成的。
++
++### 5.2 回到 canonical 1 eV/ps（run_v032 / run_v033，50k + 200k）
++
++| run | 点 | TBR | 时间收敛 | 温漂 |
++|---|---|---|---|---|
++| run_v032 | flat | 4.28e-9 ± 0.50 | 2.04→5.30e-9，**61%** | +17.7 K |
++| run_v033 | P350 | 2.43e-9 ± 0.52 | 2.72→3.60e-9，**24%** | +21.9 K |
++
++降低热流也没有用。**注意**：正因为如此，v1.3 里"flux 3 更好"的判断被推翻——
++v012（flux 1）当时的 4.6% 是短生产段（100 ps）的偶然，生产段拉长到 200 ps
++后同样是几十个百分点。
++
++### 5.3 结论
++
++漂移与热流、与初始态都无关，是**模型界面在 300 K 下持续粗化**。
++在换势（真实 Ti–Si/Ti–Au）、ns 级预平衡、或降低测量温度之前，
++TBR 没有稳态，图案排名不可信。详见 `docs/STATUS_20261112.md` §7。
++
++## 6. 复现
++
++```bash
++python3 tools/pre_equil.py --structure structures/F000.data \
++  --geom structures/F000.geom.json --potentials anchor/potentials.in \
++  --out-dir preeq/F000 --steps 400000 --chunk 100000
++python3 tools/preeq_report.py preeq/F000          # 看 dPE/dt
++mpirun -np 24 --bind-to core --cpu-set 0-23 /usr/bin/lmp -in preeq/F000/in.preeq \
++  -log preeq/F000/log.preeq
++# 用检查点做生产
++python3 tools/new_run.py --config anchor/params.preeq_prod.json --scan-id PEF000 \
++  --geom structures/F000.geom.json --structure preeq/F000/preeq_0200000.data \
++  --potentials anchor/potentials.in --template templates/in.pattern.v13.template \
++  --scan-csv anchor/scan_preeq.csv
++```
+diff --git a/docs/STATUS_20261112.md b/docs/STATUS_20261112.md
+index b2202f2..7392975 100644
+--- a/docs/STATUS_20261112.md
++++ b/docs/STATUS_20261112.md
+@@ -122,3 +122,55 @@ python3 tools/tbr_uncertainty.py --run-dir <run> --seed seed_1001
+ python3 tools/qc_check.py      --run-dir <run>
+ python3 tools/rank_scan.py --workspace anchor/workspace
+ ```
++
++## 7. 追加实验（同日 19:00–20:15）：漂移与热流、初始态都无关
++
++### 7.1 长预平衡（tools/pre_equil.py，区域 NVT 300 K，无热流）
++
++| 结构 | 最小化后 | 100 ps | 200 ps | 230 ps | 末端 dPE/dt |
++|---|---|---|---|---|---|
++| flat | −159696.6 | −161976.2 | −162067.2 | −162095 | ≈ −1.0 eV/ps |
++| P350 | — | — | 同量级 | — | ≈ −1 eV/ps |
++
++230 ps 内 PE 累计下降 **2398 eV**，速率不衰减 → 界面远未平衡。
++
++### 7.2 用 200 ps 预平衡结构做 NEMD（run_v030/v031，flux 3）
++
++| run | 点 | TBR (m²K/W) | 时间收敛（前半→后半） |
++|---|---|---|---|
++| run_v030 | flat，预平衡 | 4.46e-9 ± 0.26 | 2.36e-9 → 5.13e-9，**54%** |
++| run_v031 | P350，预平衡 | 3.33e-9 ± 0.24 | 1.70e-9 → 3.94e-9，**57%** |
++
++预平衡 **没有**改善时间收敛（未预平衡时是 55%）。说明漂移不是初始态造成的。
++
++### 7.3 回到 canonical 1 eV/ps（run_v032/v033，50k 平衡 + 200k 生产）
++
++| run | 点 | TBR (m²K/W) | 时间收敛 | 温漂 |
++|---|---|---|---|---|
++| run_v032 | flat | 4.28e-9 ± 0.50 | 2.04e-9 → 5.30e-9，**61%** | +17.7 K |
++| run_v033 | P350 | 2.43e-9 ± 0.52 | 2.72e-9 → 3.60e-9，**24%** | +21.9 K |
++
++降低热流也**没有**让 TBR 稳定。温漂仍有 +18~+22 K。
++
++### 7.4 结论（这一条是今天最重要的）
++
++**漂移与热流大小无关、与是否预平衡无关，是这个模型的界面在 300 K 下持续粗化。**
++LJ 的 Ti–Au / Ti–Si 相互作用（0.2–0.3 eV，σ=2.0 Å）没有硅化物化学却给出极强的
++吸引，Ti 不断向 Au/Si 里扩散（生产 200 ps 后 700–790 个 Ti 原子进入 |z|<20 Å），
++每个界面都在变形，于是界面热阻随时间单调上升。
++
++因此：
++- **同一图案在不同时刻给出不同 TBR**（60 ps 0.61e-9 → 200 ps 3.37e-9，5.5 倍）；
++- 图案之间的差异（同一时刻 1.7–2 倍）与这个时间漂移同量级；
++- **无法用当前模型给出可信的"最优图案"**，任何这样的排名都会被时间漂移主导。
++
++### 7.5 要得到可信排名，必须先换掉"不稳定界面"这个前提（三选一或组合）
++
++1. **真实 Ti–Si / Ti–Au 势**（MEAM 或 EAM 合金势），让界面在 300 K 下是亚稳的，
++   而不是持续互混。这是物理层面的正解，也是交接文档早就指出的缺口。
++2. **1–3 ns 预平衡**（成本见 `docs/PROTOCOL_V14.md` §4，单点 2.3 h，4 点并行 4.3 h），
++   前提是 PE 真能到平台——本机实测 230 ps 仍以 −1 eV/ps 下降，需要先验证 1 ns 是否够。
++3. **降低温度**（200–250 K）测 TBR，扩散慢、界面稳定；但这样得到的是低温 TBR。
++
++在这三条之一落实之前，"找最优图案"只能得到**相对趋势**（宽 W ↑ → TBR ↓ 单调、
++深 D 有最优、duty>0.8 失稳），不能得到可信的排名与绝对值。
+diff --git a/reports/flux_preeq_tests_2026-11-12.csv b/reports/flux_preeq_tests_2026-11-12.csv
+new file mode 100644
+index 0000000..17880e1
+--- /dev/null
++++ b/reports/flux_preeq_tests_2026-11-12.csv
+@@ -0,0 +1,9 @@
++﻿run_id,scan_id,protocol,flux_ev_per_ps,n_equil,n_prod,TBR_m2KW,TBR_sem,time_conv_rel,temp_drift_K
++run_v012,PROBEG2,1.3,1.0,50000,100000,1.9339689641409745e-09,4.3771675145799797e-10,0.0462420396406991,11.235809627722745
++run_v013,PROBEF2,1.3,3.0,50000,100000,2.1658618892521503e-09,2.4371112329836093e-10,0.5546072819055052,10.423001248514879
++run_v026,VALP350,1.3,3.0,50000,200000,3.372472528844614e-09,2.7635117035007077e-10,0.6499413771714184,23.698775286069633
++run_v027,VALD040,1.3,3.0,50000,200000,3.751047655528069e-09,2.201271377838824e-10,0.4745361258019236,184.66274175621896
++run_v030,PEF000,1.4,3.0,20000,200000,4.45680702195767e-09,2.6207076688527464e-10,0.5403173986875647,9.8687720333333
++run_v031,PEP350,1.4,3.0,20000,200000,3.332418987992381e-09,2.358227145863949e-10,0.56850738571776,8.797727435820832
++run_v032,F1FLAT,1.3,1.0,50000,200000,4.280251723263573e-09,4.959396797799978e-10,0.6151361908554298,17.711809396517367
++run_v033,F1P350,1.3,1.0,50000,200000,2.428780600860926e-09,5.15837273353795e-10,0.24410438860040345,21.846056786567203
+diff --git a/tools/pre_equil.py b/tools/pre_equil.py
+new file mode 100644
+index 0000000..67f6384
+--- /dev/null
++++ b/tools/pre_equil.py
+@@ -0,0 +1,96 @@
++#!/usr/bin/env python3
++"""Long pre-equilibration to a potential-energy plateau (protocol v1.4 step 1).
++
++Runs the structure under regional NVT (two halves, 300 K) for --steps, writing a
++checkpoint every --chunk steps so the drift dPE/dt can be monitored and the run
++resumed/stopped without losing work.
++
++Usage:
++  python3 tools/pre_equil.py --structure structures/F000.data \
++      --geom structures/F000.geom.json --potentials anchor/potentials.in \
++      --out-dir preeq/F000 --steps 600000 --chunk 100000 --temp 300
++"""
++from __future__ import annotations
++
++import argparse
++import json
++import subprocess
++import sys
++from pathlib import Path
++
++sys.path.insert(0, str(Path(__file__).resolve().parent))
++import geomlib  # noqa: E402
++
++
++def main() -> int:
++    ap = argparse.ArgumentParser()
++    ap.add_argument("--structure", required=True)
++    ap.add_argument("--geom", required=True)
++    ap.add_argument("--potentials", required=True)
++    ap.add_argument("--out-dir", required=True)
++    ap.add_argument("--steps", type=int, default=600000)
++    ap.add_argument("--chunk", type=int, default=100000)
++    ap.add_argument("--temp", type=float, default=300.0)
++    ap.add_argument("--seed", type=int, default=1001)
++    ap.add_argument("--dt", type=float, default=0.001)
++    ap.add_argument("--run", action="store_true", help="actually launch LAMMPS")
++    ap.add_argument("--mpi", type=int, default=0, help="mpirun -np N (0 = serial)")
++    args = ap.parse_args()
++
++    geom = geomlib.load_json(Path(args.geom))
++    g = geom["groups"]
++    out = Path(args.out_dir).resolve()
++    out.mkdir(parents=True, exist_ok=True)
++    struct = Path(args.structure).resolve()
++
++    chunks = [args.chunk] * (args.steps // args.chunk)
++    if args.steps % args.chunk:
++        chunks.append(args.steps % args.chunk)
++
++    lines = [
++        "# pre-equilibration (protocol v1.4): regional NVT, no heat flux",
++        "units metal",
++        "atom_style atomic",
++        "boundary p p p",
++        f"read_data {struct}",
++        f"include {Path(args.potentials).resolve()}",
++        "neighbor 2.0 bin",
++        "neigh_modify delay 0 every 1 check yes",
++        "min_style cg",
++        "min_modify dmax 0.05",
++        "minimize 1e-6 1e-8 10000 100000",
++        f"velocity all create {args.temp} {args.seed} dist gaussian mom yes rot yes",
++        "variable zmid equal 0.5*(zlo+zhi)",
++        "region halfL block INF INF INF INF -100000.0 ${zmid} units box",
++        "region halfR block INF INF INF INF ${zmid} 100000.0 units box",
++        "group halfL_g region halfL",
++        "group halfR_g region halfR",
++        f"fix eqL halfL_g nvt temp {args.temp} {args.temp} 0.1",
++        f"fix eqR halfR_g nvt temp {args.temp} {args.temp} 0.1",
++        f"timestep {args.dt}",
++        "thermo 1000",
++        "thermo_style custom step temp pe ke etotal",
++        "thermo_modify flush yes",
++    ]
++    done = 0
++    for i, n in enumerate(chunks, 1):
++        lines.append(f"run {n}")
++        done += n
++        lines.append(f'print "PREEQ_CHECKPOINT step={done}"')
++        lines.append(f"write_data {out}/preeq_{done:07d}.data")
++    (out / "in.preeq").write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
++    print(f"[PREEQ] input: {out / 'in.preeq'}  steps={args.steps} chunks={chunks[:3]}...")
++    if not args.run:
++        print("[PREEQ] dry (pass --run to launch)")
++        return 0
++    cmd = ([f"mpirun", "-np", str(args.mpi), "--bind-to", "core",
++            "/usr/bin/lmp"] if args.mpi else ["/usr/bin/lmp"])
++    cmd += ["-in", "in.preeq", "-log", "log.preeq"]
++    print("[PREEQ] " + " ".join(cmd))
++    rc = subprocess.run(cmd, cwd=str(out)).returncode
++    print(f"[PREEQ] exit={rc}")
++    return rc
++
++
++if __name__ == "__main__":
++    sys.exit(main())
+diff --git a/tools/preeq_report.py b/tools/preeq_report.py
+new file mode 100644
+index 0000000..8916610
+--- /dev/null
++++ b/tools/preeq_report.py
+@@ -0,0 +1,80 @@
++#!/usr/bin/env python3
++"""Report dPE/dt convergence for a pre-equilibration run (protocol v1.4).
++
++Reads <preeq-dir>/log.preeq (thermo every 1000 steps: step temp pe ke etotal)
++and prints block-averaged PotEng drift, so the plateau can be judged.
++
++Usage: python3 tools/preeq_report.py preeq/F000 [--last 0.5]
++"""
++from __future__ import annotations
++
++import argparse
++import sys
++from pathlib import Path
++
++import numpy as np
++
++
++def parse(path: Path):
++    tables = []
++    hdr = None
++    rows = []
++    for line in path.read_text(errors="replace").splitlines():
++        s = line.strip()
++        if s.startswith("Step"):
++            if hdr is not None and rows:
++                tables.append((hdr, rows))
++            hdr = s.split()
++            rows = []
++            continue
++        if hdr and s:
++            parts = s.split()
++            if len(parts) == len(hdr) and parts[0].isdigit():
++                try:
++                    rows.append([float(x) for x in parts])
++                except ValueError:
++                    pass
++    if hdr is not None and rows:
++        tables.append((hdr, rows))
++    # keep the longest table (the run), ignoring the short minimize table
++    tables = [(h, r) for h, r in tables if "PotEng" in h]
++    if not tables:
++        return None, None
++    hdr, rows = max(tables, key=lambda hr: len(hr[1]))
++    return hdr, np.array(rows)
++
++
++def main() -> int:
++    ap = argparse.ArgumentParser()
++    ap.add_argument("dir")
++    ap.add_argument("--last", type=float, default=0.5, help="fraction of the run to fit")
++    args = ap.parse_args()
++    d = Path(args.dir)
++    hdr, a = parse(d / "log.preeq")
++    if a is None:
++        print(f"[PREEQ] {d}: 没有 thermo 数据")
++        return 1
++    idx = {n: hdr.index(n) for n in hdr}
++    step = a[:, idx["Step"]] / 1000.0  # ps (dt = 1 fs)
++    pe = a[:, idx["PotEng"]]
++    T = a[:, idx["Temp"]]
++    print(f"[PREEQ] {d.name}: {len(step)} thermo rows, t = 0..{step[-1]:.0f} ps")
++    print(f"  {'t(ps)':>7} {'PotEng':>13} {'T':>7} {'dPE/dt':>9}")
++    n = len(step)
++    blk = max(1, n // 12)
++    for i in range(0, n - 1, blk):
++        j = min(i + blk, n - 1)
++        slope = (pe[j] - pe[i]) / (step[j] - step[i]) if step[j] > step[i] else float("nan")
++        print(f"  {step[i]:7.0f} {pe[i]:13.2f} {T[i]:7.1f} {slope:+9.4f}")
++    cut = int((1 - args.last) * n)
++    sl = np.polyfit(step[cut:], pe[cut:], 1)[0]
++    last = np.polyfit(step[-max(5, n // 20):], pe[-max(5, n // 20):], 1)[0]
++    print(f"  last {args.last:.0%} slope = {sl:+.4f} eV/ps ; "
++          f"very-last slope = {last:+.4f} eV/ps")
++    verdict = "PLATEAU (|dPE/dt| < 0.05)" if abs(last) < 0.05 else "still relaxing"
++    print(f"  => {verdict}")
++    return 0
++
++
++if __name__ == "__main__":
++    sys.exit(main())
+-- 
+2.34.1
+

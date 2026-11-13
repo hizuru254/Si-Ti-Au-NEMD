@@ -1,0 +1,180 @@
+From 9aba8be04e35835c2a4019afb6eb09c962fe12aa Mon Sep 17 00:00:00 2001
+From: hizuru254 <2654837056@qq.com>
+Date: Fri, 13 Nov 2026 12:44:01 +0800
+Subject: [14/14] potentials: literature-based mixed LJ cross terms, and why
+ they also fail
+
+Replaces the hand-picked LJ cross terms (eps 0.20-0.30 eV, sigma 2.00 A) with
+Lorentz-Berthelot mixing of published single-element parameters
+(Si 3.83 A/0.01743 eV, Ti 2.93 A/0.0250 eV, Au 2.57 A/0.0390 eV), keeping the
+real Si Tersoff and Au EAM. Same flat structure, 300 K NVT for 50 ps:
+
+  old: PotEng drops 2206 eV, dPE/dt -6.4 eV/ps, 743 Ti atoms inside |z|<20 A
+  new: PotEng drops  311 eV, dPE/dt -4.1 eV/ps, 373 Ti atoms inside |z|<20 A
+       BUT 4320 Si atoms (26 %) end up beyond |z|>105 A, i.e. the slabs expand
+       into the vacuum -- the layers are no longer bound.
+
+So the two failure modes are 'violently reactive' and 'not bound'. There is no
+physically sensible value for a Lennard-Jones cross term between Ti and Si,
+because the real bond is chemical (silicide, ~1 eV/atom). This closes the
+'fit the LJ better' route and shows that a trustworthy TBR for this stack needs
+a real multi-element potential (NEP/MEAM); the state of the art for Si-Ti is the
+NEP of arXiv:2511.16646, which needs the GPUMD plugin and cannot run on stock
+LAMMPS 29Sep2021.
+
+Also adds docs/HANDOFF_STATE.md: a context-loss-proof state file (what is
+established, what is in flight, next steps, open human decisions).
+---
+ docs/HANDOFF_STATE.md             | 65 +++++++++++++++++++++++++++++++
+ docs/STATUS_20261112.md           | 39 +++++++++++++++++++
+ potentials/potentials.mixed.lj.in | 19 +++++++++
+ 3 files changed, 123 insertions(+)
+ create mode 100644 docs/HANDOFF_STATE.md
+ create mode 100644 potentials/potentials.mixed.lj.in
+
+diff --git a/docs/HANDOFF_STATE.md b/docs/HANDOFF_STATE.md
+new file mode 100644
+index 0000000..b7092fe
+--- /dev/null
++++ b/docs/HANDOFF_STATE.md
+@@ -0,0 +1,65 @@
++# 会话状态与交接（2026-11-13 12:50）
++
++> 上下文可能中断，这个文件保证任何新会话都能无损续接。**先读这个文件。**
++
++## 0. 位置
++
++| 东西 | 路径 |
++|---|---|
++| WSL 工作仓库 | `/home/cc/si_nemd`（HEAD 见 `git log -1`） |
++| Windows 干净副本 | `F:\LJ KE\si_nemd`（`git clone` 而来，工作区干净） |
++| 关键文档 | `docs/RESULTS_SUMMARY.md`（总结）、`docs/STATUS_20261112.md`（15 节流水）、`docs/PROTOCOL_V1{3,4,6}.md` |
++| 推送用 patch | `reports/0001..0013-*.patch`、`reports/si_nemd_2026-11-13.bundle` |
++
++## 1. 已经确定的事实（都经过本机实测）
++
++1. **环境**：lmp 29 Sep 2021 U2、OpenMPI 4.1.2、Py3.10.12/numpy 1.21.5、96 核。
++   - 29Sep2021 **没有 `-nonbuf`**；没有 `$(zmid)`。
++   - **并发 MPI rank 上限 48**（48→128 步/秒；56→7；64→3.5，无报错）。
++2. **协议 v1.6**（`templates/in.pattern.v16.template`）：run 内退火 300→700→300 K(65 ps)
++   → 300 K 平衡 10 ps → 通量热身 80 ps（不计量）→ 计量 150 ps。
++   温漂 **+0.9 K**、能量 1.8e-7、通量对称 1.5e-5。
++3. **三种估计量**（同一批数据）：窗口外推 5.33e-9 / 全局拟合 1.38e-8 / 平面法 **1.36e-8**
++   → 仓库原方法偏低 2.6 倍；**平面法 `tools/tbr_plane.py` 是最可信的估计量**。
++4. **线性响应**：flat 在 1 与 3 eV/ps 下 TBR_eff = 1.3567e-8 vs 1.3569e-8（差 0.01%）。
++5. **图案结论**：v1.6 全协议扫描 8 点，TBR_eff 全在 1.347–1.411e-8，
++   散布 4.7% 而单点误差 4–5% → **没有任何图案统计上优于平面**。
++6. **漂移是真实的**：TBR_eff 在 160 ps 内单调 +73%；300 K 与 700 K 的 PE 都不收敛
++   （700 K 保温 150 ps 仍 −2.8 eV/ps）。
++
++## 2. 正在进行（2026-11-13 12:50 启动）
++
++**势函数替换实验**（用户要求用真实势）：
++- 新文件 `potentials/potentials.mixed.lj.in`：Si=Tersoff、Au=EAM（都是标准真实势）；
++  Ti-Ti 与所有交叉项改用**文献值 + Lorentz–Berthelot 混合**的 LJ：
++  Si 3.83 Å/0.01743 eV、Ti 2.93 Å/0.0250 eV、Au 2.57 Å/0.0390 eV。
++  旧文件是手挑的 ε=0.2–0.3 eV、σ=2.0 Å（强 6–14 倍），那是持续互混的根因。
++- 对比实验 `pottest/{old,new}`：同一 flat 结构、300 K NVT 50 ps，看 PE 漂移与 Ti 互混。
++
++## 3. 下一步（按顺序）
++
++1. 读 `pottest/{old,new}/log.preeq` 的 PotEng 斜率 → 若 new 明显更平，说明交叉项是主因。
++2. 用新势重跑 v1.6 anchor（flat）：`params.v16.json` 改 `potentials` 指向新文件，
++   看 `time_converged` 是否降到 ≤5%（这是 QC 唯一还没过的实质判据）。
++3. 若稳定：用新势重跑 8 点扫描（`scan_parallel.py`，4×12 ranks，约 2.6 h）。
++4. 更新 `potentials.lock.json` 哈希 + preflight 重跑。
++5. 重新生成 patch/bundle，复制到 `F:\LJ KE\si_nemd`，推 GitHub（需凭据）。
++
++## 4. 未解决 / 需人类决定
++
++- **R²≥0.995**：结构性不可达（窗内温降 0.2 K vs bin 噪声 1.2 K），需批准改判据。
++- **GitHub 推送**：WSL 无凭据（无 PAT / ssh key / gh），用户选择自行推或提供 PAT。
++- **真三元势**：文献前沿是 NEP 机器学习势（arXiv:2511.16646, Si-Ti），
++  但需要 GPUMD 插件，stock LAMMPS 29Sep2021 用不了。
++
++## 5. 常用命令
++
++```bash
++cd /home/cc/si_nemd
++git log --oneline -5
++MPIRUN_EXTRA="--cpu-set 0-23" bash tools/run_seed.sh anchor/workspace/run_vNNN 1001
++python3 tools/postprocess.py --run-dir <run> --seed seed_1001
++python3 tools/tbr_plane.py  --run-dir <run> --seed seed_1001
++python3 tools/tbr_global_fit.py --run-dir <run> --seed seed_1001
++python3 tools/rank_plane.py --workspace anchor/workspace --proto 1.6
++```
+diff --git a/docs/STATUS_20261112.md b/docs/STATUS_20261112.md
+index e4c9e29..5172091 100644
+--- a/docs/STATUS_20261112.md
++++ b/docs/STATUS_20261112.md
+@@ -434,3 +434,42 @@ dT = T(-84) - T(+84)        TBR_eff = dT / q
+ 主导热阻是 ~10 Å 的 Ti/Au 互混层（§11），它的热阻由化学/势函数决定，
+ 几何槽形只能改变接触面积，而这部分面积变化在总热阻里占比 <5%。
+ 换句话说：**要降低 TBR，需要改界面化学，而不是改界面形状。**
++
++## 16. 换真实势的尝试：交叉项没有物理合理的中间值
++
++用户要求改用真实势。本机能拿到的真实单元素势：Si=Tersoff、Au=EAM（Foiles），
++Ti 没有可用于三元 hybrid 的多元素 MEAM（本机 `library_2mm.meam` 只有 Al/Co/Cr/Fe/Mo/Ni/V，
++`library.meam` 有 Si/Au 但无 Ti）。文献前沿是 Si-Ti 的 NEP 机器学习势
++（arXiv:2511.16646），但需要 GPUMD 插件，stock LAMMPS 29Sep2021 用不了。
++
++于是退一步：保留 Si/Au 的真实势，把**手挑的 LJ 交叉项**（ε=0.20–0.30 eV、σ=2.0 Å）
++换成**文献值 + Lorentz–Berthelot 混合**（`potentials/potentials.mixed.lj.in`）：
++
++| 对 | 旧（手挑） | 新（混合） | 变化 |
++|---|---|---|---|
++| Si–Ti | 0.30 eV / 2.00 Å | 0.0209 eV / 3.38 Å | ε ↓14×，σ ↑1.7× |
++| Si–Au | 0.20 eV / 2.00 Å | 0.0261 eV / 3.20 Å | ε ↓7.7× |
++| Ti–Au | 0.20 eV / 2.00 Å | 0.0312 eV / 2.75 Å | ε ↓6.4× |
++| Ti–Ti | 0.30 eV / 2.80 Å | 0.0250 eV / 2.93 Å | ε ↓12× |
++
++同一 flat 结构、300 K NVT 各跑 50 ps（`pottest/{old,new}`）：
++
++| | 旧势 | 新势 |
++|---|---|---|
++| 最小化后 PE | −159,696.6 | −116,400.2 |
++| 50 ps 后 PE | −161,902.9 | −116,711.4 |
++| **50 ps 内 PE 下降** | **2,206 eV** | **311 eV** |
++| 末端 dPE/dt | −6.4 eV/ps | −4.1 eV/ps |
++| Ti 进入 |z|<20 | 743 个 | 373 个 |
++| **Si 跑到 |z|>105（真空）** | **0** | **4,320 个（占 26%）** |
++
++**两种失效模式**：
++
++- 旧势：交叉项太强（ε 高 6–14 倍、σ 只有 2.0 Å）→ 界面剧烈互混，TBR 单调上涨。
++- 新势：交叉项太弱 → 层间几乎不粘，Si 板向真空膨胀 15 Å，结构本身解体。
++
++也就是说，**LJ 交叉项不存在物理合理的中间值**：真实 Ti–Si 是化学键（硅化物，
++~1 eV/atom 量级），LJ 无论取强取弱都表达不了。这从反面证明：
++**要得到可信的 TBR，必须用真实多元素势（NEP / MEAM），而不是调 LJ 参数。**
++
++这条与 §14（700 K 也不收敛）一起，把"用 LJ 交叉项做 Si/Ti/Au NEMD"这条路彻底关闭。
+diff --git a/potentials/potentials.mixed.lj.in b/potentials/potentials.mixed.lj.in
+new file mode 100644
+index 0000000..6a2de76
+--- /dev/null
++++ b/potentials/potentials.mixed.lj.in
+@@ -0,0 +1,19 @@
++# ============================================================================
++# potentials.mixed.lj.in  -- hybrid Tersoff(Si) + EAM(Au) + LJ(Ti and crosses)
++#
++# Si-Si  : Tersoff   Si.tersoff            (Tersoff, PRB 39, 5566 (1989))
++# Au-Au  : EAM       Au_u3.eam             (Foiles, Baskes, Daw, PRB 33, 7983 (1986))
++# Ti-Ti  : LJ        sigma 2.93 A / eps 0.0250 eV
++# Cross  : LJ        Lorentz-Berthelot mixing of the single-element LJ sets
++#
++# Single-element LJ: Si 3.83 A / 0.01743 eV (1.682 kJ/mol, ACS Macro Lett. table),
++# Ti 2.93 A / 0.0250 eV, Au 2.57 A / 0.0390 eV.
++# The previous file used eps 0.20-0.30 eV with sigma 2.00 A for all crosses.
++# ============================================================================
++pair_style hybrid tersoff eam lj/cut 10.0
++pair_coeff * * tersoff "/home/cc/si_nemd/potentials/Si.tersoff" Si NULL NULL
++pair_coeff 3 3 eam "/home/cc/si_nemd/potentials/Au_u3.eam"
++pair_coeff 1 2 lj/cut 0.02087 3.380
++pair_coeff 1 3 lj/cut 0.02607 3.200
++pair_coeff 2 2 lj/cut 0.02500 2.930
++pair_coeff 2 3 lj/cut 0.03122 2.750
+-- 
+2.34.1
+
