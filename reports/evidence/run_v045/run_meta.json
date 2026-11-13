@@ -1,10 +1,50 @@
 {
   "schema_version": "1.0",
-  "seed": 1001,
+  "run_id": "run_v045",
+  "scan": {
+    "scan_id": "S16W160",
+    "kind": "rect",
+    "W_nm": "1.6",
+    "D_nm": "0.6",
+    "P_nm": "3.0",
+    "t_nm": "4.0",
+    "phi_deg": "0",
+    "sided": "single",
+    "status": "pending",
+    "note": "W mid"
+  },
+  "geometry": {
+    "geometry_id": "S16W160_rect",
+    "status": "APPROVED",
+    "sha256": "9a92e1b17d03e733316081b545a430b5ebd5043f378d8cf04ef5c8276699c85c"
+  },
+  "inputs": {
+    "structure": {
+      "path": "/home/cc/si_nemd/structures/S16W160.data",
+      "sha256": "f305f3afb97d770ffdac8deae782457934d6307a8d88f70c6e7b4292c0617e3e"
+    },
+    "potentials": {
+      "path": "/home/cc/si_nemd/anchor/potentials.in",
+      "sha256": "adbe7d3d881f8d73e7dcdc6dd93bcbb39249d7f1e02d2b6bb005b44a002faa5e"
+    },
+    "template": {
+      "path": "/home/cc/si_nemd/templates/in.pattern.v16.template",
+      "sha256": "6b80b0c78a69bc48d754e1dd3bd83b3a66b354f76d86014352236c0a2b5e75f6"
+    },
+    "params": {
+      "path": "/home/cc/si_nemd/anchor/params.v16_scan.json",
+      "sha256": "7bd8e4d6bd2cf9cebfdf98f17a3fcaf3747e4f5fb4ed84c38b8b3873ef5b3fca"
+    }
+  },
+  "seeds": [
+    1001
+  ],
+  "seed_dirs": [
+    "seed_1001"
+  ],
   "launch_mode": "mpi",
-  "mpi_ranks": 12,
-  "omp_threads": 1,
-  "exit_code": 0,
-  "wall_time_s": 4508.0,
-  "timed_out": false
+  "state": "CREATED",
+  "created_at": "2026-11-12T23:47:35+08:00",
+  "host": "DESKTOP-B19V58P",
+  "platform": "Linux-6.18.58.1-microsoft-standard-WSL2-x86_64-with-glibc2.35"
 }

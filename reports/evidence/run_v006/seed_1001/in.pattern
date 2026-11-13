@@ -1,0 +1,61 @@
+# =============================================================================
+# in.pattern 模板（人类维护，Agent 只允许替换双下划线占位符，禁止改动物理内容）
+# 渲染后每个 seed 目录中的 in.pattern 为独立、自包含的输入脚本。
+# 路径铁律：脚本内只出现相对路径（../），禁止绝对路径与非 ASCII 字符。
+# 单位制：metal (eV, Angstrom, ps, K)
+# =============================================================================
+units metal
+atom_style atomic
+boundary p p p
+
+read_data ../structure.data
+print "GEOM lx=$(lx) ly=$(ly) lz=$(lz) xlo=$(xlo) ylo=$(ylo) zlo=$(zlo)"
+
+# --- 势函数：人类维护、哈希锁定；Agent 禁止编辑 -------------------------------
+include ../potentials.in
+# -----------------------------------------------------------------------------
+
+neighbor 2.0 bin
+neigh_modify delay 0 every 1 check yes
+
+# --- 热源 / 热汇区域：所有 z 坐标来自 geom.json，禁止写死 ----------------------
+region hot_region  block INF INF INF INF -92.000000 -84.000000 units box
+region cold_region block INF INF INF INF 84.000000 92.000000 units box
+group hot_g  region hot_region
+group cold_g region cold_region
+variable hot_n  equal count(hot_g)
+variable cold_n equal count(cold_g)
+print "COUNTS hot=${hot_n} cold=${cold_n}"
+
+# --- 结构最小化（强制配置，禁止 Agent 修改）-----------------------------------
+min_style cg
+min_modify dmax 0.05
+minimize 1e-6 1e-8 10000 100000
+
+# --- 300 K 平衡（NVT）---------------------------------------------------------
+velocity all create 300.0 1001 dist gaussian mom yes rot yes
+fix eq all nvt temp 300.0 300.0 0.1
+timestep 0.001
+thermo 100
+thermo_style custom step temp pe ke etotal
+run 100000
+unfix eq
+
+# --- NEMD 生产段：时间清零，便于后处理对齐 ------------------------------------
+# 协议 v1.2：heat 的 N 参数=1（每步注入）；eflux 仍是 params.flux (eV/ps)，
+# 平均通量不变。旧写法把组原子数放进 N，等于每 1728 步注入 1.728 eV 的脉冲。
+reset_timestep 0
+
+compute Tprof all chunk/atom bin/1d z lower 2 units box
+fix prof all ave/chunk 10 100 1000 Tprof temp file profile.txt
+
+fix hot  hot_g  heat 1  1
+fix cold cold_g heat 1 -1
+fix prod all nve
+
+thermo_style custom step temp pe ke etotal f_hot f_cold
+print "PROD_BEGIN step=$(step)"
+run 100000
+print "PROD_END step=$(step)"
+
+write_data final.data

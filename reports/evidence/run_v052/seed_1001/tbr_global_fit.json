@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "method": "global piecewise-linear fit",
+  "run_id": "run_v052",
+  "seed": "seed_1001",
+  "blocks_used": 120,
+  "bins_fitted": 57,
+  "residual_rms_K": 2.791771554563812,
+  "q_W_m2": 3773533783.3942122,
+  "jumps_K": [
+    3.635830442893579
+  ],
+  "interfaces": [
+    {
+      "id": "TI_AU",
+      "z": 0.0,
+      "dT_K": 3.635830442893579,
+      "tbr_m2KW": 9.63508120397223e-10
+    }
+  ],
+  "dT_total_K": 3.635830442893579,
+  "TBR_m2KW": 9.63508120397223e-10,
+  "TBR_sem_fitcov": 4.128386304432844e-10,
+  "TBR_sem_blocks": 2.3011521804741233e-10
+}

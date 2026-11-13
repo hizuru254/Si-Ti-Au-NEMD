@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run_v028",
+  "scan": {
+    "scan_id": "DBL160",
+    "kind": "rect",
+    "W_nm": "1.6",
+    "D_nm": "0.6",
+    "P_nm": "3.0",
+    "t_nm": "4.0",
+    "phi_deg": "0",
+    "sided": "double",
+    "status": "pending",
+    "note": "double-sided; build_geometry double-etch bug fixed 2026-11-12"
+  },
+  "per_seed": {
+    "seed_1001": {
+      "valid": false,
+      "tbr_total_m2KW": 2.9718578248472977e-09,
+      "dT_total_K": 33.643217704517156,
+      "checks": {
+        "parse_ok": true,
+        "exit_zero": true,
+        "log_complete": true,
+        "no_lost_atoms": true,
+        "minimize_converged": true,
+        "net_flux_zero": true,
+        "flux_symmetry": true,
+        "toteng_drift": true,
+        "dT_signal": true,
+        "fit_quality": false,
+        "tbr_in_range": true,
+        "time_converged": false,
+        "temp_stable": true,
+        "log_unmodified": true
+      }
+    }
+  },
+  "group_checks": {
+    "manifest_ok": true,
+    "all_seeds_valid": false,
+    "n_valid_ge_3": false,
+    "relstd_ok": false,
+    "geom_approved": true
+  },
+  "n_valid": 0,
+  "n_seeds": 1,
+  "TBR_mean_m2KW": null,
+  "TBR_std_m2KW": null,
+  "TBR_relstd": null,
+  "is_passed": false,
+  "note": "all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged",
+  "checked_at": "2026-11-12T18:22:34+08:00"
+}

@@ -1,0 +1,159 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run_v014",
+  "seed": "seed_1001",
+  "log_sha256": "d2255beea879dbea76d80106ebdb7c33ed0c69d23f7ae9ef7d97ffad8499392d",
+  "profile_sha256": "105b56cc68f93cf47f71aa4d4a7358697ee79cdaa9c798751dc876e607f1aaf0",
+  "exit_code": 0,
+  "wall_time_s": 1564.0,
+  "status": "OK",
+  "lammps_banner": "LAMMPS (29 Sep 2021 - Update 2)",
+  "box": {
+    "lx": 65.16,
+    "ly": 65.16,
+    "area_A2": 4245.825599999999,
+    "projected": {
+      "lx": 65.16,
+      "ly": 65.16,
+      "z_min": -115.0,
+      "z_max": 115.0,
+      "boundary": "p p p"
+    }
+  },
+  "q_W_m2": 11320601350.182638,
+  "counts": {
+    "hot": 1728,
+    "cold": 1728
+  },
+  "energy": {
+    "flux_hot_eVps": 1.000019962562396,
+    "flux_cold_eVps": 0.9999759378036607,
+    "flux_symmetry_rel": 4.402387990587865e-05,
+    "toteng_mean_eV": -159733.31462562396,
+    "toteng_drift_rel": 4.263528938552376e-06
+  },
+  "temperature": {
+    "mean_first10pct_K": 300.83997249999993,
+    "mean_last10pct_K": 320.8669221311476,
+    "drift_K": 20.02694963114766
+  },
+  "profile": {
+    "n_blocks_total": 60,
+    "n_blocks_used": 13,
+    "n_chunks": 115,
+    "n_chunks_occupied": 100,
+    "z_first_A": -114.0,
+    "z_last_A": 114.0,
+    "T_min_K": 270.7826153846153,
+    "T_max_K": 361.30123076923076,
+    "T_span_K": 90.51861538461543
+  },
+  "dT_total_K": 27.083054578754115,
+  "tbr_total_m2KW": 2.3923688981696347e-09,
+  "tbr_iface_mean_m2KW": 5.980922245424087e-10,
+  "interfaces": [
+    {
+      "id": "Si_Ti_L",
+      "z": -60.0,
+      "left": {
+        "z_min": -78.0,
+        "z_max": -62.0,
+        "n_points": 9,
+        "r2": 0.8619307580573912,
+        "slope_K_per_A": -0.6361551282051228,
+        "T_at_interface_K": 343.1836367521367,
+        "r2_below_threshold": true
+      },
+      "right": {
+        "z_min": -58.0,
+        "z_max": -42.0,
+        "n_points": 9,
+        "r2": 0.3824635994137101,
+        "slope_K_per_A": -0.14420192307692922,
+        "T_at_interface_K": 338.09564316239306,
+        "r2_below_threshold": true
+      },
+      "dT_K": 5.087993589743633
+    },
+    {
+      "id": "Ti_Au_L",
+      "z": -20.0,
+      "left": {
+        "z_min": -38.0,
+        "z_max": -28.0,
+        "n_points": 6,
+        "r2": 0.112731333613871,
+        "slope_K_per_A": -0.052620879120884104,
+        "T_at_interface_K": 332.78506959706937,
+        "r2_below_threshold": true
+      },
+      "right": {
+        "z_min": -18.0,
+        "z_max": -2.0,
+        "n_points": 9,
+        "r2": 0.5064240845281358,
+        "slope_K_per_A": -0.28621602564103943,
+        "T_at_interface_K": 329.4329209401712,
+        "r2_below_threshold": true
+      },
+      "dT_K": 3.35214865689818
+    },
+    {
+      "id": "Au_Ti_R",
+      "z": 20.0,
+      "left": {
+        "z_min": 2.0,
+        "z_max": 18.0,
+        "n_points": 9,
+        "r2": 0.056621029915362664,
+        "slope_K_per_A": 0.08799166666665495,
+        "T_at_interface_K": 326.3912585470085,
+        "r2_below_threshold": true
+      },
+      "right": {
+        "z_min": 28.0,
+        "z_max": 38.0,
+        "n_points": 6,
+        "r2": 0.8321974796463238,
+        "slope_K_per_A": -0.43794395604395464,
+        "T_at_interface_K": 312.6917970695972,
+        "r2_below_threshold": true
+      },
+      "dT_K": 13.699461477411262
+    },
+    {
+      "id": "Ti_Si_R",
+      "z": 60.0,
+      "left": {
+        "z_min": 42.0,
+        "z_max": 58.0,
+        "n_points": 9,
+        "r2": 0.721497283894962,
+        "slope_K_per_A": -0.4202711538461508,
+        "T_at_interface_K": 297.2631175213675,
+        "r2_below_threshold": true
+      },
+      "right": {
+        "z_min": 62.0,
+        "z_max": 78.0,
+        "n_points": 9,
+        "r2": 0.7966667250348932,
+        "slope_K_per_A": -0.983248717948713,
+        "T_at_interface_K": 292.3196666666665,
+        "r2_below_threshold": true
+      },
+      "dT_K": 4.943450854701041
+    }
+  ],
+  "time_convergence": {
+    "tbr_first_half_m2KW": 1.2146210794291148e-09,
+    "tbr_second_half_m2KW": 2.556234557317521e-09,
+    "rel_diff": 0.524839739001212
+  },
+  "checks": {
+    "log_complete": true,
+    "lost_atoms": false,
+    "minimize_criterion": "energy tolerance",
+    "exit_code": 0
+  }
+}

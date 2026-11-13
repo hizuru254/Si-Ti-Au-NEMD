@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run_v047",
+  "scan": {
+    "scan_id": "S16W240",
+    "kind": "rect",
+    "W_nm": "2.4",
+    "D_nm": "0.6",
+    "P_nm": "3.0",
+    "t_nm": "4.0",
+    "phi_deg": "0",
+    "sided": "single",
+    "status": "pending",
+    "note": "W max (thin Ti wall)"
+  },
+  "geometry": {
+    "geometry_id": "S16W240_rect",
+    "status": "APPROVED",
+    "sha256": "fff6d27c48aa402c8af7e275ae7f4376dbb3daadcee87912b64dda4085110e23"
+  },
+  "inputs": {
+    "structure": {
+      "path": "/home/cc/si_nemd/structures/S16W240.data",
+      "sha256": "bcfaef60ab08d1193b639da615a83a825463455456ed11c0148f202636a12709"
+    },
+    "potentials": {
+      "path": "/home/cc/si_nemd/anchor/potentials.in",
+      "sha256": "adbe7d3d881f8d73e7dcdc6dd93bcbb39249d7f1e02d2b6bb005b44a002faa5e"
+    },
+    "template": {
+      "path": "/home/cc/si_nemd/templates/in.pattern.v16.template",
+      "sha256": "6b80b0c78a69bc48d754e1dd3bd83b3a66b354f76d86014352236c0a2b5e75f6"
+    },
+    "params": {
+      "path": "/home/cc/si_nemd/anchor/params.v16_scan.json",
+      "sha256": "7bd8e4d6bd2cf9cebfdf98f17a3fcaf3747e4f5fb4ed84c38b8b3873ef5b3fca"
+    }
+  },
+  "seeds": [
+    1001
+  ],
+  "seed_dirs": [
+    "seed_1001"
+  ],
+  "launch_mode": "mpi",
+  "state": "CREATED",
+  "created_at": "2026-11-12T23:48:01+08:00",
+  "host": "DESKTOP-B19V58P",
+  "platform": "Linux-6.18.58.1-microsoft-standard-WSL2-x86_64-with-glibc2.35"
+}

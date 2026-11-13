@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run_v011",
+  "scan": {
+    "scan_id": "PROBEG",
+    "kind": "flat",
+    "W_nm": "0",
+    "D_nm": "0",
+    "P_nm": "0",
+    "t_nm": "4.0",
+    "phi_deg": "0",
+    "sided": "single",
+    "status": "pending",
+    "note": "protocol v1.3 regional NVT equilibration"
+  },
+  "geometry": {
+    "geometry_id": "PROBEA_flat",
+    "status": "APPROVED",
+    "sha256": "30637a8cc3ffc7c915f25b539587ae51120a3e23391e1608ad971565656be68b"
+  },
+  "inputs": {
+    "structure": {
+      "path": "/home/cc/si_nemd/structures/PROBEA.data",
+      "sha256": "e56012875e41eef4c3aecff985e826a7f3ca50c323b6d315da16b8b609afacf1"
+    },
+    "potentials": {
+      "path": "/home/cc/si_nemd/anchor/potentials.in",
+      "sha256": "adbe7d3d881f8d73e7dcdc6dd93bcbb39249d7f1e02d2b6bb005b44a002faa5e"
+    },
+    "template": {
+      "path": "templates/in.pattern.v13.template",
+      "sha256": "4001e5b28a01cfefa841f414c47379c72acee9fa22a001a0d4bd9662d9a6c279"
+    },
+    "params": {
+      "path": "/home/cc/si_nemd/anchor/params.probe_G.json",
+      "sha256": "65c8bb6a50c9c8357ea4ca26a416b5dc6d293940c1dcead43ebae42b6dbd5024"
+    }
+  },
+  "seeds": [
+    1001
+  ],
+  "seed_dirs": [
+    "seed_1001"
+  ],
+  "launch_mode": "mpi",
+  "state": "CREATED",
+  "created_at": "2026-11-12T15:35:49+08:00",
+  "host": "DESKTOP-B19V58P",
+  "platform": "Linux-6.18.58.1-microsoft-standard-WSL2-x86_64-with-glibc2.35"
+}

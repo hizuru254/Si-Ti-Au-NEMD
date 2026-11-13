@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run_v036",
+  "scan": {
+    "scan_id": "V15F000",
+    "kind": "flat",
+    "W_nm": "0",
+    "D_nm": "0",
+    "P_nm": "0",
+    "t_nm": "4.0",
+    "phi_deg": "0",
+    "sided": "single",
+    "status": "pending",
+    "note": "v1.5 annealed + 100ps warmup"
+  },
+  "geometry": {
+    "geometry_id": "F000_flat",
+    "status": "APPROVED",
+    "sha256": "eafc707ca23ceeede436d89a52616b39237376349645962dfa8124f9edfec535"
+  },
+  "inputs": {
+    "structure": {
+      "path": "/home/cc/si_nemd/anneal/F000/preeq_0180000.data",
+      "sha256": "b9be45a491b6ef91a642b27d1743a58ed6df80f2001842780016ea13b809c5e1"
+    },
+    "potentials": {
+      "path": "/home/cc/si_nemd/anchor/potentials.in",
+      "sha256": "adbe7d3d881f8d73e7dcdc6dd93bcbb39249d7f1e02d2b6bb005b44a002faa5e"
+    },
+    "template": {
+      "path": "templates/in.pattern.v15.template",
+      "sha256": "e0b7cc094156c544f2508391a1efe16994e9c7a4fabf40f5d98cd18248b31aff"
+    },
+    "params": {
+      "path": "/home/cc/si_nemd/anchor/params.v15.json",
+      "sha256": "8de87c088c74e59497d8860615f5cc269c8a8dc6ffc2359645500059c158c034"
+    }
+  },
+  "seeds": [
+    1001
+  ],
+  "seed_dirs": [
+    "seed_1001"
+  ],
+  "launch_mode": "mpi",
+  "state": "CREATED",
+  "created_at": "2026-11-12T21:12:56+08:00",
+  "host": "DESKTOP-B19V58P",
+  "platform": "Linux-6.18.58.1-microsoft-standard-WSL2-x86_64-with-glibc2.35"
+}

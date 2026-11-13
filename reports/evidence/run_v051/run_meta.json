@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run_v051",
+  "scan": {
+    "scan_id": "PAIR_TIAU",
+    "kind": "pair",
+    "W_nm": "0",
+    "D_nm": "0",
+    "P_nm": "0",
+    "t_nm": "0",
+    "phi_deg": "0",
+    "sided": "single",
+    "status": "pending",
+    "note": "two-layer Ti/Au single interface"
+  },
+  "geometry": {
+    "geometry_id": "PAIR_ti_au_t60",
+    "status": "APPROVED",
+    "sha256": "1568e3b42e3a12001b0fd17f41ed3d19750cd0fb35756f28e6c7b6405101ae1f"
+  },
+  "inputs": {
+    "structure": {
+      "path": "/home/cc/si_nemd/structures/PAIR_TiAu.data",
+      "sha256": "4bf50da1a56b5bc4ff993e956918e78ea72a606b8daf9b6d5aff5b77f0f85c81"
+    },
+    "potentials": {
+      "path": "/home/cc/si_nemd/anchor/potentials.in",
+      "sha256": "f51a59aae350d3faf23b6f9e694d353882c24715f0217cb8c4efbb96645668d2"
+    },
+    "template": {
+      "path": "/home/cc/si_nemd/templates/in.pattern.template",
+      "sha256": "6b80b0c78a69bc48d754e1dd3bd83b3a66b354f76d86014352236c0a2b5e75f6"
+    },
+    "params": {
+      "path": "/home/cc/si_nemd/anchor/params.v16.json",
+      "sha256": "a4546f2c08746a23fbf5a8afe3c93d96d2dd92564904de944e99ffe81ba72a1b"
+    }
+  },
+  "seeds": [
+    1001
+  ],
+  "seed_dirs": [
+    "seed_1001"
+  ],
+  "launch_mode": "mpi",
+  "state": "CREATED",
+  "created_at": "2026-11-13T14:58:59+08:00",
+  "host": "DESKTOP-B19V58P",
+  "platform": "Linux-6.18.58.1-microsoft-standard-WSL2-x86_64-with-glibc2.35"
+}

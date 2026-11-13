@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run_v031",
+  "scan": {
+    "scan_id": "PEP350",
+    "kind": "rect",
+    "W_nm": "1.2",
+    "D_nm": "0.6",
+    "P_nm": "3.5",
+    "t_nm": "4.0",
+    "phi_deg": "0",
+    "sided": "single",
+    "status": "pending",
+    "note": "production after 400 ps pre-equilibration"
+  },
+  "geometry": {
+    "geometry_id": "P350_rect",
+    "status": "APPROVED",
+    "sha256": "f2a736cdd9ac7921b02cfdbe3d570f35aff96a9e2cd1f17000a513e2098425bf"
+  },
+  "inputs": {
+    "structure": {
+      "path": "/home/cc/si_nemd/preeq/P350/preeq_0200000.data",
+      "sha256": "d8ae0b31b8f4623699fc5ad7c815c829d2a942d544f107785f63962e02537cd4"
+    },
+    "potentials": {
+      "path": "/home/cc/si_nemd/anchor/potentials.in",
+      "sha256": "adbe7d3d881f8d73e7dcdc6dd93bcbb39249d7f1e02d2b6bb005b44a002faa5e"
+    },
+    "template": {
+      "path": "templates/in.pattern.v13.template",
+      "sha256": "4001e5b28a01cfefa841f414c47379c72acee9fa22a001a0d4bd9662d9a6c279"
+    },
+    "params": {
+      "path": "/home/cc/si_nemd/anchor/params.preeq_prod.json",
+      "sha256": "65aa02f1b2e5b1650e6947ac4855b352a3441a1b7d2cfea50a12b3cba47a3229"
+    }
+  },
+  "seeds": [
+    1001
+  ],
+  "seed_dirs": [
+    "seed_1001"
+  ],
+  "launch_mode": "mpi",
+  "state": "CREATED",
+  "created_at": "2026-11-12T19:09:39+08:00",
+  "host": "DESKTOP-B19V58P",
+  "platform": "Linux-6.18.58.1-microsoft-standard-WSL2-x86_64-with-glibc2.35"
+}

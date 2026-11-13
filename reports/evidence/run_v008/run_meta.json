@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run_v008",
+  "scan": {
+    "scan_id": "PROBEC",
+    "kind": "flat",
+    "W_nm": "0",
+    "D_nm": "0",
+    "P_nm": "0",
+    "t_nm": "4.0",
+    "phi_deg": "0",
+    "sided": "single",
+    "status": "pending",
+    "note": "protocol v1.2 probe C"
+  },
+  "geometry": {
+    "geometry_id": "PROBEC_flat",
+    "status": "APPROVED",
+    "sha256": "7ed62514b6f12d32b06b87d9518a6387640a7e00215c9361f6997231615e92b7"
+  },
+  "inputs": {
+    "structure": {
+      "path": "/home/cc/si_nemd/structures/PROBEC.data",
+      "sha256": "e56012875e41eef4c3aecff985e826a7f3ca50c323b6d315da16b8b609afacf1"
+    },
+    "potentials": {
+      "path": "/home/cc/si_nemd/anchor/potentials.in",
+      "sha256": "adbe7d3d881f8d73e7dcdc6dd93bcbb39249d7f1e02d2b6bb005b44a002faa5e"
+    },
+    "template": {
+      "path": "/home/cc/si_nemd/templates/in.pattern.template",
+      "sha256": "f66efb2965387d107c22b6f88b73ccbd34356fd36bb604d23251d3325eccda2d"
+    },
+    "params": {
+      "path": "/home/cc/si_nemd/anchor/params.probe_C.json",
+      "sha256": "dc85823d991d43d311921d53dd2250caa3077fa0b9fdaea9f4de5a0fe8e03b1b"
+    }
+  },
+  "seeds": [
+    1001
+  ],
+  "seed_dirs": [
+    "seed_1001"
+  ],
+  "launch_mode": "mpi",
+  "state": "CREATED",
+  "created_at": "2026-11-12T14:20:09+08:00",
+  "host": "DESKTOP-B19V58P",
+  "platform": "Linux-6.18.58.1-microsoft-standard-WSL2-x86_64-with-glibc2.35"
+}

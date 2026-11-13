@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run_v035",
+  "scan": {
+    "scan_id": "AEP350",
+    "kind": "rect",
+    "W_nm": "1.2",
+    "D_nm": "0.6",
+    "P_nm": "3.5",
+    "t_nm": "4.0",
+    "phi_deg": "0",
+    "sided": "single",
+    "status": "pending",
+    "note": "annealed then NEMD flux1"
+  },
+  "geometry": {
+    "geometry_id": "P350_rect",
+    "status": "APPROVED",
+    "sha256": "f2a736cdd9ac7921b02cfdbe3d570f35aff96a9e2cd1f17000a513e2098425bf"
+  },
+  "inputs": {
+    "structure": {
+      "path": "/home/cc/si_nemd/anneal/P350/preeq_0180000.data",
+      "sha256": "7a2cdf9bb4e01c31d7f4fcc90809f6dbda8ea62270c6a8a31f90d56a49988103"
+    },
+    "potentials": {
+      "path": "/home/cc/si_nemd/anchor/potentials.in",
+      "sha256": "adbe7d3d881f8d73e7dcdc6dd93bcbb39249d7f1e02d2b6bb005b44a002faa5e"
+    },
+    "template": {
+      "path": "templates/in.pattern.v13.template",
+      "sha256": "4001e5b28a01cfefa841f414c47379c72acee9fa22a001a0d4bd9662d9a6c279"
+    },
+    "params": {
+      "path": "/home/cc/si_nemd/anchor/params.anneal_prod.json",
+      "sha256": "f4691a1370744641b97149d830f051e9422d725969f54cabb3f93426505a69e8"
+    }
+  },
+  "seeds": [
+    1001
+  ],
+  "seed_dirs": [
+    "seed_1001"
+  ],
+  "launch_mode": "mpi",
+  "state": "CREATED",
+  "created_at": "2026-11-12T20:40:42+08:00",
+  "host": "DESKTOP-B19V58P",
+  "platform": "Linux-6.18.58.1-microsoft-standard-WSL2-x86_64-with-glibc2.35"
+}

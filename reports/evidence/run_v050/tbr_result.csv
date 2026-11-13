@@ -1,0 +1,2 @@
+﻿version,params_W,params_D,params_t,TBR_mean,TBR_std,seed_valid_count,is_passed,note,params_P,params_phi,sided,TBR_relstd,n_seeds,TBR_iface_mean,geom_sha256,params_sha256,finished_at
+run_v050,1.2,0.6,4.0,,,0,False,all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged,3.5,0,single,,1,,e12bd2c337ee3eeebd6716e29f220fdedce6da2047811df4b27080d3efc5e543,7bd8e4d6bd2cf9cebfdf98f17a3fcaf3747e4f5fb4ed84c38b8b3873ef5b3fca,2026-11-13T02:06:05+08:00

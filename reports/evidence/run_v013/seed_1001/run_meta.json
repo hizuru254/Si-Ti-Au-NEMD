@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "seed": 1001,
+  "launch_mode": "mpi",
+  "mpi_ranks": 24,
+  "omp_threads": 1,
+  "exit_code": 0,
+  "wall_time_s": 1239.0,
+  "timed_out": false
+}

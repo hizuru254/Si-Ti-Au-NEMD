@@ -1,0 +1,2 @@
+﻿version,params_W,params_D,params_t,TBR_mean,TBR_std,seed_valid_count,is_passed,note,params_P,params_phi,sided,TBR_relstd,n_seeds,TBR_iface_mean,geom_sha256,params_sha256,finished_at
+run_v001,0,0,4.0,,,0,False,all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality,0,0,single,,1,,81975acf2379d42e42d8957abd5ce78d46e2c7b9fba57959f2acc1dabbad4fc2,b0fff1d9e3e9ea1d4b9c2af442931f0239db23d561f7304f2ff7be1d4b8d00ba,2026-11-12T13:50:40+08:00

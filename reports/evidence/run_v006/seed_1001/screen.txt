@@ -1,0 +1,129 @@
+LAMMPS (29 Sep 2021 - Update 2)
+  using 1 OpenMP thread(s) per MPI task
+Reading data file ...
+  orthogonal box = (0.0000000 0.0000000 -115.00000) to (65.160000 65.160000 115.00000)
+  2 by 2 by 8 MPI processor grid
+  reading atoms ...
+  45880 atoms
+  read_data CPU = 1.469 seconds
+GEOM lx=65.159999999999996589 ly=65.159999999999996589 lz=230 xlo=0 ylo=0 zlo=-115
+Reading tersoff potential file /home/cc/si_nemd/potentials/Si.tersoff with DATE: 2007-10-25
+Reading eam potential file /home/cc/si_nemd/potentials/Au_u3.eam with DATE: 2007-06-11
+1728 atoms in group hot_g
+1728 atoms in group cold_g
+COUNTS hot=1728 cold=1728
+Neighbor list info ...
+  update every 1 steps, delay 0 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 12
+  ghost atom cutoff = 12
+  binsize = 6, bins = 11 11 39
+  5 neighbor lists, perpetual/occasional/extra = 5 0 0
+  (1) pair tersoff, perpetual, skip from (4)
+      attributes: full, newton on
+      pair build: skip
+      stencil: none
+      bin: none
+  (2) pair eam, perpetual, skip from (5)
+      attributes: half, newton on
+      pair build: skip
+      stencil: none
+      bin: none
+  (3) pair lj/cut, perpetual, skip from (5)
+      attributes: half, newton on
+      pair build: skip
+      stencil: none
+      bin: none
+  (4) neighbor class addition, perpetual
+      attributes: full, newton on
+      pair build: full/bin/atomonly
+      stencil: full/bin/3d
+      bin: standard
+  (5) neighbor class addition, perpetual, half/full from (4)
+      attributes: half, newton on
+      pair build: halffull/newton
+      stencil: none
+      bin: none
+Setting up cg style minimization ...
+  Unit style    : metal
+  Current step  : 0
+Per MPI rank memory allocation (min/avg/max) = 7.242 | 9.156 | 12.29 Mbytes
+Step Temp E_pair E_mol TotEng Press 
+       0            0   -154039.39            0   -154039.39    151273.91 
+     199            0    -159687.5            0    -159687.5    69222.912 
+Loop time of 146.05 on 32 procs for 199 steps with 45880 atoms
+
+98.7% CPU use with 32 MPI tasks x 1 OpenMP threads
+
+Minimization stats:
+  Stopping criterion = energy tolerance
+  Energy initial, next-to-last, final = 
+     -154039.390904012   -159687.46331393  -159687.500120719
+  Force two-norm initial, final = 149.10560 14.753958
+  Force max component initial, final = 3.1670101 2.9791855
+  Final line search alpha, max atom move = 0.051736249 0.15413188
+  Iterations, force evaluations = 199 232
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 32.899     | 43.608     | 54.689     | 102.8 | 29.86
+Neigh   | 0.011381   | 0.28208    | 0.87807    |  47.0 |  0.19
+Comm    | 34.455     | 41.064     | 46.835     |  53.0 | 28.12
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 61.09      |            |       | 41.83
+
+Nlocal:        1433.75 ave        1792 max         720 min
+Histogram: 8 0 0 0 0 0 0 0 16 8
+Nghost:        6391.38 ave        7738 max        3265 min
+Histogram: 8 0 0 0 0 0 0 0 8 16
+Neighs:         0.00000 ave           0 max           0 min
+Histogram: 32 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 0
+Ave neighs/atom = 0.0000000
+Neighbor list builds = 4
+Dangerous builds = 0
+Setting up Verlet run ...
+  Unit style    : metal
+  Current step  : 199
+  Time step     : 0.001
+Per MPI rank memory allocation (min/avg/max) = 6.117 | 8.319 | 11.16 Mbytes
+Step Temp PotEng KinEng TotEng 
+     199          300    -159687.5    1779.0979    -157908.4 
+     200    298.87102   -159680.79    1772.4026   -157908.39 
+     300    146.21884   -158699.15    867.12541   -157832.02 
+     400    182.80431   -158780.21    1084.0892   -157696.13 
+     500     204.6462   -158750.84    1213.6187   -157537.22 
+     600    216.92488    -158650.4    1286.4353   -157363.96 
+     700    232.16071    -158560.1    1376.7888   -157183.31 
+     800     259.5017   -158541.38    1538.9297   -157002.45 
+     900    277.75674   -158478.72    1647.1881   -156831.54 
+    1000    292.14984   -158421.27    1732.5439   -156688.73 
+    1100    311.01006   -158428.64    1844.3911   -156584.25 
+    1200    307.88744   -158421.42     1825.873   -156595.55 
+    1300    305.31087   -158509.93     1810.593   -156699.34 
+    1400    299.60878   -158575.66    1776.7778   -156798.88 
+    1500    295.04524   -158602.67    1749.7145   -156852.95 
+    1600    296.23191   -158609.39    1756.7518   -156852.64 
+    1700    299.84314   -158590.48    1778.1676   -156812.31 
+    1800    303.90145    -158576.2    1802.2348   -156773.97 
+    1900     303.5569   -158580.64    1800.1914   -156780.45 
+    2000    298.28178   -158596.31    1768.9082    -156827.4 
+    2100    296.92143   -158626.14     1760.841   -156865.29 
+    2200    296.32623   -158620.85    1757.3112   -156863.53 
+    2300    299.32385    -158599.1     1775.088   -156824.01 
+    2400    303.89295   -158581.13    1802.1843   -156778.94 
+    2500    303.51128   -158566.98    1799.9209   -156767.06 
+    2600    305.23918   -158615.18    1810.1679   -156805.02 
+    2700     301.5142   -158662.04    1788.0776   -156873.96 
+    2800    300.07312   -158713.62    1779.5315   -156934.09 
+    2900     299.1651   -158747.78    1774.1466   -156973.63 
+    3000    300.14228   -158777.23    1779.9416   -156997.29 
+    3100     299.1725   -158790.64    1774.1905   -157016.45 
+    3200    302.54785   -158829.16    1794.2075   -157034.96 
+    3300    300.01764    -158850.2    1779.2024   -157070.99 
+    3400    300.18774   -158895.15    1780.2112   -157114.94 
+    3500    300.55652   -158942.39    1782.3982   -157159.99 
+    3600    298.30453   -158969.13    1769.0432   -157200.09 

@@ -1,0 +1,114 @@
+{
+  "schema_version": "1.0",
+  "status": "APPROVED",
+  "geometry_id": "S16W080_rect",
+  "note": "S16W080: Si(001)/Ti(hcp)/Au/Ti/Si, scheme B (etch Ti, fill Au); t(Au)=4.0 nm, Ti=40.0 A, W=0.8 nm, D=0.6 nm, P=3.0 nm, phi=0.0 deg, single",
+  "box": {
+    "lx": 65.16,
+    "ly": 65.16,
+    "z_min": -115.0,
+    "z_max": 115.0,
+    "boundary": "p p p"
+  },
+  "layers": [
+    {
+      "id": "Si_L",
+      "material": "Si",
+      "z_min": -100.0,
+      "z_max": -60.0
+    },
+    {
+      "id": "Ti_L",
+      "material": "Ti",
+      "z_min": -60.0,
+      "z_max": -20.0
+    },
+    {
+      "id": "Au",
+      "material": "Au",
+      "z_min": -20.0,
+      "z_max": 20.0
+    },
+    {
+      "id": "Ti_R",
+      "material": "Ti",
+      "z_min": 20.0,
+      "z_max": 60.0
+    },
+    {
+      "id": "Si_R",
+      "material": "Si",
+      "z_min": 60.0,
+      "z_max": 100.0
+    }
+  ],
+  "interfaces": [
+    {
+      "id": "Si_Ti_L",
+      "z": -60.0,
+      "left": {
+        "z_min": -78.0,
+        "z_max": -62.0,
+        "material": "Si"
+      },
+      "right": {
+        "z_min": -58.0,
+        "z_max": -42.0,
+        "material": "Ti"
+      }
+    },
+    {
+      "id": "Ti_Au_L",
+      "z": -20.0,
+      "left": {
+        "z_min": -38.0,
+        "z_max": -28.0,
+        "material": "Ti"
+      },
+      "right": {
+        "z_min": -18.0,
+        "z_max": -2.0,
+        "material": "Au"
+      }
+    },
+    {
+      "id": "Au_Ti_R",
+      "z": 20.0,
+      "left": {
+        "z_min": 2.0,
+        "z_max": 18.0,
+        "material": "Au"
+      },
+      "right": {
+        "z_min": 28.0,
+        "z_max": 38.0,
+        "material": "Ti"
+      }
+    },
+    {
+      "id": "Ti_Si_R",
+      "z": 60.0,
+      "left": {
+        "z_min": 42.0,
+        "z_max": 58.0,
+        "material": "Ti"
+      },
+      "right": {
+        "z_min": 62.0,
+        "z_max": 78.0,
+        "material": "Si"
+      }
+    }
+  ],
+  "groups": {
+    "hot": {
+      "z_min": -92.0,
+      "z_max": -84.0
+    },
+    "cold": {
+      "z_min": 84.0,
+      "z_max": 92.0
+    }
+  },
+  "chunk_bin_A": 2.0
+}

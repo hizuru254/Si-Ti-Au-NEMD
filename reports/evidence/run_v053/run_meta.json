@@ -1,10 +1,50 @@
 {
   "schema_version": "1.0",
-  "seed": 1001,
+  "run_id": "run_v053",
+  "scan": {
+    "scan_id": "PAIR_TIAU3",
+    "kind": "pair",
+    "W_nm": "0",
+    "D_nm": "0",
+    "P_nm": "0",
+    "t_nm": "0",
+    "phi_deg": "0",
+    "sided": "single",
+    "status": "pending",
+    "note": "two-layer Ti/Au flux 3"
+  },
+  "geometry": {
+    "geometry_id": "PAIR_ti_au_t60",
+    "status": "APPROVED",
+    "sha256": "e99f268b2a53432623464eedb930737e7b3617b32c041cd3180fb73b520fe99c"
+  },
+  "inputs": {
+    "structure": {
+      "path": "/home/cc/si_nemd/structures/PAIR_TiAu.data",
+      "sha256": "2350b59aee9afb52dd0f8178c7d70de188e3d7f12f4cf9167a55fc6ff92d1213"
+    },
+    "potentials": {
+      "path": "/home/cc/si_nemd/anchor/potentials.in",
+      "sha256": "f51a59aae350d3faf23b6f9e694d353882c24715f0217cb8c4efbb96645668d2"
+    },
+    "template": {
+      "path": "/home/cc/si_nemd/templates/in.pattern.template",
+      "sha256": "6b80b0c78a69bc48d754e1dd3bd83b3a66b354f76d86014352236c0a2b5e75f6"
+    },
+    "params": {
+      "path": "/home/cc/si_nemd/anchor/params.pair.json",
+      "sha256": "cd735cfb0ecfcea1386db2237788c4216275475be0933c9a4af990a4de6abfe1"
+    }
+  },
+  "seeds": [
+    1001
+  ],
+  "seed_dirs": [
+    "seed_1001"
+  ],
   "launch_mode": "mpi",
-  "mpi_ranks": 24,
-  "omp_threads": 1,
-  "exit_code": 0,
-  "wall_time_s": 1219.0,
-  "timed_out": false
+  "state": "CREATED",
+  "created_at": "2026-11-13T15:19:49+08:00",
+  "host": "DESKTOP-B19V58P",
+  "platform": "Linux-6.18.58.1-microsoft-standard-WSL2-x86_64-with-glibc2.35"
 }

@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run_v017",
+  "scan": {
+    "scan_id": "W200",
+    "kind": "rect",
+    "W_nm": "2.0",
+    "D_nm": "0.6",
+    "P_nm": "3.0",
+    "t_nm": "4.0",
+    "phi_deg": "0",
+    "sided": "single",
+    "status": "pending",
+    "note": "rect grooves in Ti filled by Au; duty=0.67"
+  },
+  "per_seed": {
+    "seed_1001": {
+      "valid": false,
+      "tbr_total_m2KW": 2.9533095041722132e-09,
+      "dT_total_K": 33.433239560439176,
+      "checks": {
+        "parse_ok": true,
+        "exit_zero": true,
+        "log_complete": true,
+        "no_lost_atoms": true,
+        "minimize_converged": true,
+        "net_flux_zero": true,
+        "flux_symmetry": true,
+        "toteng_drift": true,
+        "dT_signal": true,
+        "fit_quality": false,
+        "tbr_in_range": true,
+        "time_converged": false,
+        "temp_stable": false,
+        "log_unmodified": true
+      }
+    }
+  },
+  "group_checks": {
+    "manifest_ok": true,
+    "all_seeds_valid": false,
+    "n_valid_ge_3": false,
+    "relstd_ok": false,
+    "geom_approved": true
+  },
+  "n_valid": 0,
+  "n_seeds": 1,
+  "TBR_mean_m2KW": null,
+  "TBR_std_m2KW": null,
+  "TBR_relstd": null,
+  "is_passed": false,
+  "note": "all_seeds_valid=False; n_valid_ge_3=False; relstd_ok=False; seed_1001:fit_quality/time_converged/temp_stable",
+  "checked_at": "2026-11-12T17:26:13+08:00"
+}
